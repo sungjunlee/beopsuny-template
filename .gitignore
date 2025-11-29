@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.env
+
+# Data files (can be re-downloaded)
+.claude/skills/beopsuny/data/raw/*.xml
+.claude/skills/beopsuny/data/parsed/*.md
+
+# But keep directory structure
+!.claude/skills/beopsuny/data/raw/.gitkeep
+!.claude/skills/beopsuny/data/parsed/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets (API keys if any in future)
+.env.local
+*.secret
+
+# Config with personal OC code
+.claude/skills/beopsuny/config/settings.yaml
