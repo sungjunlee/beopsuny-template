@@ -16,12 +16,15 @@ import argparse
 import json
 import os
 import re
+import socket
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 try:
     import feedparser
@@ -95,8 +98,12 @@ def _load_config_file():
     return _config_cache
 
 
-def get_oc_code():
-    """OC 코드 로드 (환경변수 > 설정파일)"""
+def get_oc_code() -> str:
+    """OC 코드 로드 (환경변수 > 설정파일)
+
+    Raises:
+        ValueError: OC 코드를 찾을 수 없는 경우
+    """
     oc_code = os.environ.get(ENV_OC_CODE)
     if oc_code:
         return oc_code
@@ -105,9 +112,10 @@ def get_oc_code():
     oc_code = config.get("oc_code", "")
 
     if not oc_code:
-        print(f"Error: OC code not found.", file=sys.stderr)
-        print(f"Set: export {ENV_OC_CODE}=your_oc_code", file=sys.stderr)
-        sys.exit(1)
+        raise ValueError(
+            f"OC code not found. "
+            f"Set environment variable {ENV_OC_CODE} or configure in {CONFIG_PATH}"
+        )
 
     return oc_code
 
@@ -118,15 +126,35 @@ def ensure_data_dir():
 
 
 def fetch_url(url: str, timeout: int = 30) -> str:
-    """URL에서 데이터 가져오기"""
-    req = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": "Mozilla/5.0 (compatible; Beopsuny/1.0; +https://github.com/sungjunlee/beopsuny-template)"
-        },
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as response:
-        return response.read().decode("utf-8")
+    """URL에서 데이터 가져오기
+
+    Args:
+        url: 요청할 URL
+        timeout: 타임아웃 (초)
+
+    Returns:
+        응답 본문 (UTF-8 디코딩)
+
+    Raises:
+        RuntimeError: 네트워크 오류 발생 시
+    """
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (compatible; Beopsuny/1.0; +https://github.com/sungjunlee/beopsuny-template)"
+            },
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            return response.read().decode("utf-8")
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"HTTP error {e.code}: {e.reason}") from e
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"URL error: {e.reason}") from e
+    except socket.timeout:
+        raise RuntimeError(f"Request timeout after {timeout}s") from None
+    except Exception as e:
+        raise RuntimeError(f"Unexpected error fetching URL: {e}") from e
 
 
 # ============================================================
@@ -134,34 +162,70 @@ def fetch_url(url: str, timeout: int = 30) -> str:
 # ============================================================
 
 
-def fetch_rss(dept_code: str = None, keyword: str = None, limit: int = 20):
-    """RSS 피드에서 보도자료 수집"""
+def fetch_rss(
+    dept_code: Optional[str] = None,
+    keyword: Optional[str] = None,
+    limit: int = 20,
+) -> List[Dict[str, str]]:
+    """RSS 피드에서 보도자료 수집
+
+    Args:
+        dept_code: 부처 코드 (ftc, moel, fsc, pipc, moleg). None이면 전체 조회
+        keyword: 필터링 키워드
+        limit: 부처당 최대 건수
+
+    Returns:
+        보도자료 목록
+
+    Raises:
+        ImportError: feedparser 미설치 시
+        ValueError: 잘못된 부처 코드
+    """
     if not HAS_FEEDPARSER:
-        print("Error: feedparser 라이브러리가 필요합니다.", file=sys.stderr)
-        print("설치: pip install feedparser", file=sys.stderr)
-        sys.exit(1)
+        raise ImportError(
+            "feedparser 라이브러리가 필요합니다. 설치: pip install feedparser"
+        )
 
-    results = []
-
-    # 부처 코드가 지정되면 해당 부처만, 아니면 전체
-    feeds_to_check = {}
+    # 부처 코드 검증
     if dept_code:
-        if dept_code in RSS_FEEDS:
-            feeds_to_check[dept_code] = RSS_FEEDS[dept_code]
-        else:
-            print(f"Error: 알 수 없는 부처 코드: {dept_code}", file=sys.stderr)
-            print(f"가능한 코드: {', '.join(RSS_FEEDS.keys())}", file=sys.stderr)
-            sys.exit(1)
+        if dept_code not in RSS_FEEDS:
+            raise ValueError(
+                f"알 수 없는 부처 코드: {dept_code}. "
+                f"가능한 코드: {', '.join(RSS_FEEDS.keys())}"
+            )
+        feeds_to_check = {dept_code: RSS_FEEDS[dept_code]}
     else:
         feeds_to_check = RSS_FEEDS
+
+    results = []
 
     for code, feed_info in feeds_to_check.items():
         try:
             feed = feedparser.parse(feed_info["url"])
+
+            # feedparser bozo 오류 체크 (파싱 경고)
+            if hasattr(feed, "bozo") and feed.bozo:
+                print(
+                    f"Warning: {feed_info['name']} RSS 파싱 경고: {feed.bozo_exception}",
+                    file=sys.stderr,
+                )
+
+            if not feed.entries:
+                print(
+                    f"Warning: {feed_info['name']} RSS에 항목이 없습니다.",
+                    file=sys.stderr,
+                )
+                continue
+
             for entry in feed.entries[:limit]:
+                # 필수 필드 검증
+                title = entry.get("title", "")
+                if not title:
+                    continue
+
                 # 키워드 필터링
                 if keyword:
-                    title_lower = entry.get("title", "").lower()
+                    title_lower = title.lower()
                     summary_lower = entry.get("summary", "").lower()
                     if keyword.lower() not in title_lower and keyword.lower() not in summary_lower:
                         continue
@@ -169,7 +233,7 @@ def fetch_rss(dept_code: str = None, keyword: str = None, limit: int = 20):
                 results.append({
                     "dept": feed_info["name"],
                     "dept_code": code,
-                    "title": entry.get("title", ""),
+                    "title": title,
                     "link": entry.get("link", ""),
                     "published": entry.get("published", ""),
                     "summary": entry.get("summary", "")[:200] if entry.get("summary") else "",
@@ -182,7 +246,14 @@ def fetch_rss(dept_code: str = None, keyword: str = None, limit: int = 20):
 
 def cmd_rss(args):
     """RSS 보도자료 수집 명령"""
-    results = fetch_rss(args.dept, args.keyword, args.limit)
+    try:
+        results = fetch_rss(args.dept, args.keyword, args.limit)
+    except ImportError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
     if not results:
         print("검색 결과가 없습니다.")
@@ -204,15 +275,58 @@ def cmd_rss(args):
 # ============================================================
 
 
-def search_legal_interpret(query: str, display: int = 20, page: int = 1, target: str = "expc"):
-    """
-    법령해석례 검색
+# XML 필드 매핑 (여러 API 응답 형식 지원)
+INTERPRET_FIELD_MAPPINGS = {
+    "seq": ["법령해석일련번호", "expcSeq"],
+    "title": ["안건명", "expcNm"],
+    "case_no": ["안건번호", "expcNo"],
+    "query_org": ["질의기관명", "qryInsttNm"],
+    "interpret_org": ["해석기관명", "anwInsttNm"],
+    "interpret_date": ["해석일자", "anwYd"],
+}
 
-    target 옵션:
-    - expc: 일반 법령해석례 (법제처)
-    - moelCgmExpc: 고용노동부 법령해석 (별도 권한 필요)
+
+def _get_xml_field(item: ET.Element, field_key: str) -> str:
+    """XML 아이템에서 여러 가능한 필드명 중 첫 번째 값 반환"""
+    for field_name in INTERPRET_FIELD_MAPPINGS.get(field_key, []):
+        value = item.findtext(field_name, "")
+        if value:
+            return value
+    return ""
+
+
+def _is_html_error_response(content: str) -> bool:
+    """응답이 HTML 에러 페이지인지 확인"""
+    stripped = content.strip()
+    return (
+        stripped.startswith("<!DOCTYPE")
+        or stripped.startswith("<html")
+        or stripped.startswith("<HTML")
+    )
+
+
+def search_legal_interpret(
+    query: str,
+    display: int = 20,
+    page: int = 1,
+    target: str = "expc",
+) -> Dict[str, Any]:
+    """법령해석례 검색
+
+    Args:
+        query: 검색어
+        display: 표시 건수 (최대 100)
+        page: 페이지 번호
+        target: API 타겟 (expc: 일반, moelCgmExpc: 고용노동부)
+
+    Returns:
+        검색 결과 딕셔너리 (total, results, error 키 포함)
     """
-    oc = get_oc_code()
+    try:
+        oc = get_oc_code()
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return {"total": 0, "results": [], "error": "config_error"}
 
     params = {
         "OC": oc,
@@ -229,7 +343,7 @@ def search_legal_interpret(query: str, display: int = 20, page: int = 1, target:
         content = fetch_url(url)
 
         # HTML 에러 페이지 감지 (인증 실패 등)
-        if "<!DOCTYPE html" in content or "사용자인증에 실패" in content:
+        if _is_html_error_response(content):
             print(f"Warning: API 인증 실패 (target={target})", file=sys.stderr)
             print(f"  - 법령해석례(expc)는 별도 API 권한이 필요할 수 있습니다.", file=sys.stderr)
             print(f"  - https://open.law.go.kr 에서 권한 확인 바랍니다.", file=sys.stderr)
@@ -237,28 +351,34 @@ def search_legal_interpret(query: str, display: int = 20, page: int = 1, target:
 
         root = ET.fromstring(content)
 
+        # XML 내부 에러 메시지 확인
+        error_msg = root.findtext(".//errorMsg") or root.findtext(".//retMsg")
+        if error_msg and ("인증" in error_msg or "401" in error_msg):
+            print(f"Warning: API 인증 오류: {error_msg}", file=sys.stderr)
+            return {"total": 0, "results": [], "error": "auth_failed"}
+
         results = []
         # expc와 moelCgmExpc 두 가지 태그 모두 지원
         for tag in ["expc", "moelCgmExpc"]:
             for item in root.findall(f".//{tag}"):
                 results.append({
-                    "seq": item.findtext("법령해석일련번호", "") or item.findtext("expcSeq", ""),
-                    "title": item.findtext("안건명", "") or item.findtext("expcNm", ""),
-                    "case_no": item.findtext("안건번호", "") or item.findtext("expcNo", ""),
-                    "query_org": item.findtext("질의기관명", "") or item.findtext("qryInsttNm", ""),
-                    "interpret_org": item.findtext("해석기관명", "") or item.findtext("anwInsttNm", ""),
-                    "interpret_date": item.findtext("해석일자", "") or item.findtext("anwYd", ""),
+                    "seq": _get_xml_field(item, "seq"),
+                    "title": _get_xml_field(item, "title"),
+                    "case_no": _get_xml_field(item, "case_no"),
+                    "query_org": _get_xml_field(item, "query_org"),
+                    "interpret_org": _get_xml_field(item, "interpret_org"),
+                    "interpret_date": _get_xml_field(item, "interpret_date"),
                 })
 
         total = root.findtext(".//totalCnt", "0")
         return {"total": int(total), "results": results}
 
+    except RuntimeError as e:
+        print(f"Error: 네트워크 오류: {e}", file=sys.stderr)
+        return {"total": 0, "results": [], "error": "network_error"}
     except ET.ParseError as e:
         print(f"Error: XML 파싱 실패: {e}", file=sys.stderr)
         return {"total": 0, "results": [], "error": "parse_error"}
-    except urllib.error.HTTPError as e:
-        print(f"Error: HTTP 오류 {e.code}: {e.reason}", file=sys.stderr)
-        return {"total": 0, "results": [], "error": f"http_{e.code}"}
     except Exception as e:
         print(f"Error: 법령해석 검색 실패: {e}", file=sys.stderr)
         return {"total": 0, "results": [], "error": str(e)}
