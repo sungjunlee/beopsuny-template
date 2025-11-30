@@ -126,10 +126,55 @@ def clean_item_number(number: str) -> str:
     return number.rstrip('.')
 
 
+def generate_frontmatter(info: dict, article_filter: str = None) -> str:
+    """YAML frontmatter 생성"""
+    import urllib.parse
+    from datetime import datetime
+
+    law_name = info['name']
+    law_id = info['law_id']
+
+    # 출처 URL 생성
+    source_url = f"https://www.law.go.kr/법령/{urllib.parse.quote(law_name)}"
+    if article_filter:
+        source_url += f"/제{article_filter}조"
+
+    lines = [
+        "---",
+        f"title: \"{law_name}\"",
+        f"law_id: \"{law_id}\"",
+        f"type: 법령",
+        f"law_type: \"{info.get('law_type', '')}\"",
+        f"ministry: \"{info.get('ministry', '')}\"",
+        f"promulgation_date: \"{info.get('promul_date', '')}\"",
+        f"enforcement_date: \"{info.get('enforce_date', '')}\"",
+        f"revision_type: \"{info.get('revision_type', '')}\"",
+        f"source_url: \"{source_url}\"",
+        f"source_name: \"국가법령정보센터\"",
+        f"retrieved_at: \"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\"",
+    ]
+
+    if article_filter:
+        lines.append(f"article_filter: \"{article_filter}\"")
+
+    # 관련 태그
+    tags = ["법령", info.get('law_type', ''), info.get('ministry', '')]
+    tags = [t for t in tags if t]  # 빈 값 제거
+    lines.append(f"tags: {tags}")
+
+    lines.append("---")
+    lines.append("")
+
+    return '\n'.join(lines)
+
+
 def to_markdown(law_data: dict, article_filter: str = None) -> str:
     """구조화된 데이터를 Markdown으로 변환"""
     lines = []
     info = law_data['basic_info']
+
+    # Frontmatter 추가
+    lines.append(generate_frontmatter(info, article_filter))
 
     # 제목
     lines.append(f"# {info['name']}")

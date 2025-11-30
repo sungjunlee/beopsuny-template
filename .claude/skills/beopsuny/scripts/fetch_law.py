@@ -45,19 +45,67 @@ def load_config():
     return config.get('oc_code', '')
 
 
+def get_major_law_id(name: str) -> str | None:
+    """주요 법령의 ID를 설정 파일에서 조회"""
+    if not CONFIG_PATH.exists():
+        return None
+
+    with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+
+    major_laws = config.get('major_laws', {})
+
+    # 정확한 이름으로 먼저 검색
+    if name in major_laws:
+        return major_laws[name]
+
+    # 공백 제거 후 검색
+    clean_name = name.replace(' ', '')
+    for law_name, law_id in major_laws.items():
+        if law_name.replace(' ', '') == clean_name:
+            return law_id
+
+    return None
+
+
 def api_request(endpoint: str, params: dict) -> ET.Element:
     """API 요청 및 XML 파싱"""
     url = f"{BASE_URL}/{endpoint}?{urllib.parse.urlencode(params)}"
 
     try:
-        with urllib.request.urlopen(url, timeout=30) as response:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=30) as response:
             content = response.read().decode('utf-8')
+
+            # HTML 응답 감지 (API 오류 시 HTML 반환됨)
+            if content.strip().startswith('<!DOCTYPE') or content.strip().startswith('<html'):
+                print(f"Error: API returned HTML instead of XML.", file=sys.stderr)
+                print(f"This usually means the domain is not in the network allowlist.", file=sys.stderr)
+                print(f"", file=sys.stderr)
+                print(f"Solution: Add 'law.go.kr' to allowed domains in:", file=sys.stderr)
+                print(f"  Claude Desktop: Settings > Capabilities > Network egress", file=sys.stderr)
+                print(f"", file=sys.stderr)
+                print(f"URL: {url}", file=sys.stderr)
+                sys.exit(1)
+
             return ET.fromstring(content)
+    except urllib.error.HTTPError as e:
+        print(f"Error: HTTP {e.code} - {e.reason}", file=sys.stderr)
+        if e.code == 403:
+            print(f"", file=sys.stderr)
+            print(f"403 Forbidden usually means network access is blocked.", file=sys.stderr)
+            print(f"Add 'law.go.kr' to allowed domains in:", file=sys.stderr)
+            print(f"  Claude Desktop: Settings > Capabilities > Network egress", file=sys.stderr)
+        sys.exit(1)
     except urllib.error.URLError as e:
         print(f"Error: API request failed - {e}", file=sys.stderr)
         sys.exit(1)
     except ET.ParseError as e:
         print(f"Error: Failed to parse XML response - {e}", file=sys.stderr)
+        print(f"", file=sys.stderr)
+        print(f"This may indicate the API returned an error page instead of XML.", file=sys.stderr)
+        print(f"Check if 'law.go.kr' is in the allowed domains list.", file=sys.stderr)
+        print(f"URL: {url}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -439,6 +487,12 @@ def fetch_law_by_name(name: str, with_decree: bool = False, force: bool = False)
             print(f"(강제 다운로드: --force 옵션 사용)")
             return root
 
+    # 주요 법령인 경우 설정 파일에서 ID 직접 조회
+    major_law_id = get_major_law_id(name)
+    if major_law_id:
+        print(f"📌 '{name}'은 주요 법령입니다. (ID: {major_law_id})")
+        return fetch_law_by_id(major_law_id, force=True)
+
     results = search_laws(name, display=5)
 
     if not results:
@@ -485,7 +539,7 @@ def fetch_law_by_name(name: str, with_decree: bool = False, force: bool = False)
     return root
 
 
-def get_recent_laws(days: int = 30, from_date: str = None, to_date: str = None, target: str = "law"):
+def get_recent_laws(days: int = 30, from_date: str = None, to_date: str = None, target: str = "law", date_type: str = "ef"):
     """
     최근 개정 법령 조회
 
@@ -494,6 +548,7 @@ def get_recent_laws(days: int = 30, from_date: str = None, to_date: str = None, 
         from_date: 시작일 (YYYYMMDD)
         to_date: 종료일 (YYYYMMDD)
         target: 검색 대상
+        date_type: 날짜 기준 (ef: 시행일, anc: 공포일)
     """
     oc = load_config()
 
@@ -503,22 +558,30 @@ def get_recent_laws(days: int = 30, from_date: str = None, to_date: str = None, 
     else:
         end = datetime.now()
         start = end - timedelta(days=days)
-        date_range = f"{start.strftime('%Y%m%d')}~{end.strftime('%Y%m%d')}"
+        from_date = start.strftime('%Y%m%d')
+        to_date = end.strftime('%Y%m%d')
+        date_range = f"{from_date}~{to_date}"
 
     params = {
         'OC': oc,
         'target': target,
         'type': 'XML',
         'display': 100,
-        'sort': 'date',  # 날짜순 정렬
+        'sort': 'efdes',  # 시행일자 내림차순
     }
 
-    # 공포일자 범위로 검색 (efYd: 시행일자)
-    # API에서 날짜 범위 파라미터명 확인 필요
+    # 날짜 범위 파라미터 추가 (efYd: 시행일자, ancYd: 공포일자)
+    if date_type == "anc":
+        params['ancYd'] = date_range
+        params['sort'] = 'ddes'  # 공포일자 내림차순
+    else:
+        params['efYd'] = date_range
 
     root = api_request('lawSearch.do', params)
 
-    print(f"\n=== 최근 법령 목록 ({date_range}) ===\n")
+    total = root.findtext('.//totalCnt', '0')
+    date_type_name = "공포일" if date_type == "anc" else "시행일"
+    print(f"\n=== 최근 법령 목록 ({date_type_name} 기준: {date_range}) - 총 {total}건 ===\n")
 
     results = []
     for item in root.findall('.//law'):
@@ -528,11 +591,6 @@ def get_recent_laws(days: int = 30, from_date: str = None, to_date: str = None, 
         enforce_date = item.findtext('시행일자', '')
         ministry = item.findtext('소관부처명', '')
         revision_type = item.findtext('제개정구분명', '')
-
-        # 날짜 필터링
-        if from_date and to_date:
-            if promul_date and (promul_date < from_date or promul_date > to_date):
-                continue
 
         results.append({
             'id': law_id,
@@ -549,7 +607,100 @@ def get_recent_laws(days: int = 30, from_date: str = None, to_date: str = None, 
         print(f"   소관: {ministry}")
         print()
 
-    print(f"총 {len(results)}건")
+    print(f"표시: {len(results)}건 / 전체: {total}건")
+    return results
+
+
+def search_exact_law(name: str):
+    """
+    정확한 법령명으로 검색 (클라이언트측 필터링)
+
+    Args:
+        name: 정확한 법령명 (예: "상법", "민법")
+
+    Note:
+        API는 부분 일치 검색만 지원하므로, 결과에서 정확히 일치하는 것만 필터링
+    """
+    # 주요 법령인 경우 설정 파일에서 ID 직접 활용
+    major_law_id = get_major_law_id(name)
+    if major_law_id:
+        print(f"\n💡 '{name}'은 주요 법령입니다. 직접 조회합니다...")
+        print(f"   → python scripts/fetch_law.py fetch --id {major_law_id}\n")
+
+    oc = load_config()
+
+    # 충분한 결과를 가져와서 필터링
+    params = {
+        'OC': oc,
+        'target': 'law',
+        'type': 'XML',
+        'query': name,
+        'display': 100,
+    }
+
+    root = api_request('lawSearch.do', params)
+
+    print(f"\n=== 법령 정확 검색: '{name}' ===\n")
+
+    results = []
+    exact_matches = []
+    related_matches = []
+
+    for item in root.findall('.//law'):
+        law_id = item.findtext('법령ID', '')
+        law_name = item.findtext('법령명한글', '') or item.findtext('법령명', '')
+        promul_date = item.findtext('공포일자', '')
+        enforce_date = item.findtext('시행일자', '')
+        ministry = item.findtext('소관부처명', '')
+        law_type = item.findtext('법령구분명', '')
+
+        result = {
+            'id': law_id,
+            'name': law_name,
+            'promul_date': promul_date,
+            'enforce_date': enforce_date,
+            'ministry': ministry,
+            'type': law_type,
+        }
+
+        # 정확히 일치하는지 확인
+        clean_name = name.replace(' ', '')
+        clean_law_name = law_name.replace(' ', '')
+
+        if clean_law_name == clean_name:
+            exact_matches.append(result)
+        elif clean_law_name.startswith(clean_name) and ('시행령' in law_name or '시행규칙' in law_name):
+            related_matches.append(result)
+
+    # 정확히 일치하는 법령 출력
+    if exact_matches:
+        print("📌 정확히 일치하는 법령:\n")
+        for r in exact_matches:
+            print(f"📜 {r['name']}")
+            print(f"   ID: {r['id']}")
+            print(f"   구분: {r['type']} | 소관: {r['ministry']}")
+            print(f"   공포일: {r['promul_date']} | 시행일: {r['enforce_date']}")
+            print(f"   링크: https://www.law.go.kr/법령/{urllib.parse.quote(r['name'])}")
+            print()
+        results.extend(exact_matches)
+    else:
+        print(f"⚠️  '{name}'과 정확히 일치하는 법령이 없습니다.\n")
+
+    # 관련 법령 (시행령, 시행규칙) 출력
+    if related_matches:
+        print("📎 관련 법령 (시행령/시행규칙):\n")
+        for r in related_matches:
+            print(f"📜 {r['name']}")
+            print(f"   ID: {r['id']}")
+            print(f"   구분: {r['type']} | 소관: {r['ministry']}")
+            print(f"   공포일: {r['promul_date']} | 시행일: {r['enforce_date']}")
+            print()
+        results.extend(related_matches)
+
+    if not results:
+        print(f"💡 힌트: '{name}'을 포함하는 법령을 검색하려면:")
+        print(f"   python scripts/fetch_law.py search \"{name}\"")
+
     return results
 
 
@@ -657,6 +808,10 @@ def main():
     cases_parser.add_argument('--display', type=int, default=20, help='결과 개수')
     cases_parser.add_argument('--page', type=int, default=1, help='페이지 번호')
 
+    # exact 명령 (정확한 법령명 검색)
+    exact_parser = subparsers.add_parser('exact', help='정확한 법령명 검색 (예: 상법, 민법)')
+    exact_parser.add_argument('name', help='정확한 법령명')
+
     # fetch 명령
     fetch_parser = subparsers.add_parser('fetch', help='법령/판례 다운로드')
     fetch_parser.add_argument('--id', help='법령/판례 ID')
@@ -672,11 +827,15 @@ def main():
     recent_parser.add_argument('--days', type=int, default=30, help='최근 N일')
     recent_parser.add_argument('--from', dest='from_date', help='시작일 (YYYYMMDD)')
     recent_parser.add_argument('--to', dest='to_date', help='종료일 (YYYYMMDD)')
+    recent_parser.add_argument('--date-type', choices=['ef', 'anc'], default='ef',
+                               help='날짜 기준 (ef: 시행일, anc: 공포일)')
 
     args = parser.parse_args()
 
     if args.command == 'search':
         search_laws(args.query, args.type, args.display, args.page, args.sort)
+    elif args.command == 'exact':
+        search_exact_law(args.name)
     elif args.command == 'cases':
         search_cases(args.query, args.court, args.from_date, args.display, args.page)
     elif args.command == 'fetch':
@@ -690,7 +849,7 @@ def main():
             print("Error: --id, --name, 또는 --case 중 하나를 지정하세요.", file=sys.stderr)
             sys.exit(1)
     elif args.command == 'recent':
-        get_recent_laws(args.days, args.from_date, args.to_date)
+        get_recent_laws(args.days, args.from_date, args.to_date, date_type=args.date_type)
     else:
         parser.print_help()
 
