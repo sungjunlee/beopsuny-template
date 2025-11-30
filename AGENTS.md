@@ -122,11 +122,20 @@ python .claude/skills/beopsuny/scripts/gen_link.py case "2022다12345"
 
 ## API 설정
 
-스킬 사용 전 API 키 설정이 필요합니다:
-- **국가법령정보**: https://open.law.go.kr (OC 코드)
-- **열린국회정보**: https://open.assembly.go.kr (선택적)
+스킬 사용 전 API 키 설정이 필요합니다. **환경변수** 또는 **설정 파일** 사용 가능.
 
-설정 파일: `.claude/skills/beopsuny/config/settings.yaml`
+### 환경변수 (권장 - Claude Code Web, Codex Cloud)
+```bash
+export BEOPSUNY_OC_CODE="your_oc_code"           # 필수
+export BEOPSUNY_ASSEMBLY_API_KEY="your_api_key"  # 선택
+```
+
+### 설정 파일 (로컬)
+`.claude/skills/beopsuny/config/settings.yaml`
+
+### API 키 발급
+- **국가법령정보 OC 코드**: https://open.law.go.kr (필수)
+- **열린국회정보 API 키**: https://open.assembly.go.kr (선택)
 
 ## 외부 참고 사이트
 

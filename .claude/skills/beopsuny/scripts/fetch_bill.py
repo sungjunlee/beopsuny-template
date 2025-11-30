@@ -13,6 +13,7 @@ Usage:
 
 import argparse
 import json
+import os
 import sys
 import urllib.parse
 import urllib.request
@@ -29,6 +30,9 @@ DATA_DIR = SKILL_DIR / "data" / "bills"
 
 # 열린국회정보 API 기본 URL (HTTPS는 400 에러 발생, HTTP 사용)
 BASE_URL = "http://open.assembly.go.kr/portal/openapi"
+
+# 환경변수 이름
+ENV_ASSEMBLY_API_KEY = "BEOPSUNY_ASSEMBLY_API_KEY"
 
 # 서비스 코드 매핑
 SERVICE_CODES = {
@@ -177,22 +181,29 @@ def save_to_markdown(results: list, query_type: str, query_info: dict, filename:
 
 
 def load_config():
-    """설정 파일에서 API 키 로드"""
-    if not CONFIG_PATH.exists():
-        print(f"Error: Config file not found at {CONFIG_PATH}", file=sys.stderr)
-        print("Please create config/settings.yaml with your assembly_api_key.", file=sys.stderr)
-        sys.exit(1)
+    """API 키 로드 (환경변수 > 설정파일)"""
+    # 1. 환경변수 우선
+    api_key = os.environ.get(ENV_ASSEMBLY_API_KEY)
+    if api_key:
+        return api_key
 
-    with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-        config = yaml.safe_load(f)
+    # 2. 설정 파일 fallback
+    if CONFIG_PATH.exists():
+        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f) or {}
+        api_key = config.get('assembly_api_key', '')
+        if api_key:
+            return api_key
 
-    api_key = config.get('assembly_api_key', '')
-    if not api_key:
-        print("Error: assembly_api_key not found in config.", file=sys.stderr)
-        print("Get your API key from https://open.assembly.go.kr", file=sys.stderr)
-        sys.exit(1)
-
-    return api_key
+    # API 키 없음
+    print(f"Error: Assembly API key not found.", file=sys.stderr)
+    print(f"", file=sys.stderr)
+    print(f"Set one of the following:", file=sys.stderr)
+    print(f"  1. Environment variable: export {ENV_ASSEMBLY_API_KEY}=your_api_key", file=sys.stderr)
+    print(f"  2. Config file: {CONFIG_PATH}", file=sys.stderr)
+    print(f"", file=sys.stderr)
+    print(f"Get your API key at: https://open.assembly.go.kr", file=sys.stderr)
+    sys.exit(1)
 
 
 def api_request(service_code: str, params: dict, response_type: str = "json") -> dict:

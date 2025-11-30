@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import os
 import re
 import sys
 import urllib.parse
@@ -31,28 +32,55 @@ DATA_PARSED_DIR = SKILL_DIR / "data" / "parsed"
 # API 기본 URL
 BASE_URL = "http://www.law.go.kr/DRF"
 
+# 환경변수 이름
+ENV_OC_CODE = "BEOPSUNY_OC_CODE"
+
+# 설정 캐시
+_config_cache = None
+
+
+def _load_config_file():
+    """설정 파일 로드 (캐싱)"""
+    global _config_cache
+    if _config_cache is not None:
+        return _config_cache
+
+    if CONFIG_PATH.exists():
+        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+            _config_cache = yaml.safe_load(f) or {}
+    else:
+        _config_cache = {}
+
+    return _config_cache
+
 
 def load_config():
-    """설정 파일에서 OC 코드 로드"""
-    if not CONFIG_PATH.exists():
-        print(f"Error: Config file not found at {CONFIG_PATH}", file=sys.stderr)
-        print("Please create config/settings.yaml with your OC code.", file=sys.stderr)
+    """OC 코드 로드 (환경변수 > 설정파일)"""
+    # 1. 환경변수 우선
+    oc_code = os.environ.get(ENV_OC_CODE)
+    if oc_code:
+        return oc_code
+
+    # 2. 설정 파일 fallback
+    config = _load_config_file()
+    oc_code = config.get('oc_code', '')
+
+    if not oc_code:
+        print(f"Error: OC code not found.", file=sys.stderr)
+        print(f"", file=sys.stderr)
+        print(f"Set one of the following:", file=sys.stderr)
+        print(f"  1. Environment variable: export {ENV_OC_CODE}=your_oc_code", file=sys.stderr)
+        print(f"  2. Config file: {CONFIG_PATH}", file=sys.stderr)
+        print(f"", file=sys.stderr)
+        print(f"Get your OC code at: https://open.law.go.kr", file=sys.stderr)
         sys.exit(1)
 
-    with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-        config = yaml.safe_load(f)
-
-    return config.get('oc_code', '')
+    return oc_code
 
 
 def get_major_law_id(name: str) -> str | None:
     """주요 법령의 ID를 설정 파일에서 조회"""
-    if not CONFIG_PATH.exists():
-        return None
-
-    with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-        config = yaml.safe_load(f)
-
+    config = _load_config_file()
     major_laws = config.get('major_laws', {})
 
     # 정확한 이름으로 먼저 검색

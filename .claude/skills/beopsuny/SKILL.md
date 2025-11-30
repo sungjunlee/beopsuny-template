@@ -113,8 +113,7 @@ python scripts/fetch_bill.py track "민법"               # 민법 개정안 추
 python scripts/fetch_bill.py votes --bill-no 2205704    # 의안번호로 표결 조회
 ```
 
-> **API 키 설정**: `config/settings.yaml`에 `assembly_api_key` 필요
-> - 발급: https://open.assembly.go.kr 회원가입 후 인증키 신청
+> **API 키 설정**: 환경변수 또는 설정파일 사용 (아래 "API 설정" 섹션 참조)
 
 ## 검색 대상 코드 (target)
 
@@ -167,6 +166,45 @@ https://bigcase.ai (빅케이스 - 유사 판례 추천)
 
 - `data/raw/` - 원본 XML 파일
 - `data/parsed/` - 파싱된 Markdown 파일
+- `data/bills/` - 국회 의안 검색 결과
+
+## API 설정
+
+API 키는 **환경변수** 또는 **설정 파일**로 설정할 수 있습니다.
+환경변수가 설정되어 있으면 설정 파일보다 우선합니다.
+
+### 방법 1: 환경변수 (권장 - Claude Code Web, Codex Cloud)
+
+```bash
+# 국가법령정보 OC 코드 (필수)
+export BEOPSUNY_OC_CODE="your_oc_code"
+
+# 열린국회정보 API 키 (선택 - 국회 의안 조회 시 필요)
+export BEOPSUNY_ASSEMBLY_API_KEY="your_api_key"
+```
+
+**Claude Code Web / Codex Cloud 설정:**
+- Settings에서 Environment Variables 섹션에 위 환경변수 추가
+
+### 방법 2: 설정 파일 (로컬 개발용)
+
+`config/settings.yaml` 파일 생성:
+```yaml
+# 국가법령정보 OC 코드 (필수)
+# https://open.law.go.kr 에서 발급 (가입 이메일의 @ 앞부분)
+oc_code: "your_oc_code"
+
+# 열린국회정보 API 키 (선택)
+# https://open.assembly.go.kr 에서 발급
+assembly_api_key: "your_api_key"
+```
+
+### API 키 발급처
+
+| API | 발급처 | 용도 |
+|-----|--------|------|
+| 국가법령정보 OC 코드 | https://open.law.go.kr | 법령/판례 검색 (필수) |
+| 열린국회정보 API 키 | https://open.assembly.go.kr | 국회 의안 조회 (선택) |
 
 ## Skill 폴더 위치
 
