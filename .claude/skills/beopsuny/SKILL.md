@@ -28,19 +28,54 @@ python scripts/fetch_law.py search "개인정보" --type law
 python scripts/fetch_law.py search "개인정보" --sort date   # 날짜순 정렬
 python scripts/fetch_law.py search "횡령" --type prec       # 판례 검색
 python scripts/fetch_law.py search "서울시" --type ordin    # 자치법규
-python scripts/fetch_law.py search "보건" --type admrul     # 행정규칙
 python scripts/fetch_law.py search "개인정보" --type expc   # 법령해석례
 python scripts/fetch_law.py search "기본권" --type detc     # 헌재결정례
 ```
+
+### 1-0. 행정규칙 검색 (고시/훈령/예규) ⭐ IMPORTANT
+
+> **실무자 필독**: 법률은 큰 틀만 정하고, **구체적인 기준, 절차, 서식, 과태료/과징금 부과기준** 등은
+> 대부분 **행정규칙**(고시, 훈령, 예규)에서 정합니다. 법률만 보면 실무 적용이 어렵습니다!
+
+```bash
+# 행정규칙 검색 (고시, 훈령, 예규 포함)
+python scripts/fetch_law.py search "개인정보" --type admrul
+python scripts/fetch_law.py search "과징금 부과기준" --type admrul
+python scripts/fetch_law.py search "금융위원회" --type admrul
+
+# 분야별 예시
+python scripts/fetch_law.py search "의료기관 인증" --type admrul    # 의료
+python scripts/fetch_law.py search "건축물 에너지" --type admrul    # 건축
+python scripts/fetch_law.py search "환경영향평가" --type admrul     # 환경
+```
+
+**행정규칙 유형:**
+| 유형 | 설명 | 예시 |
+|------|------|------|
+| **고시** | 일반인에게 알리는 규범적 사항 | "개인정보 보호법 위반에 대한 과징금 부과기준" |
+| **훈령** | 상급기관이 하급기관에 지시 | "검찰사건사무규칙 운용지침" |
+| **예규** | 업무처리 기준/절차 | "법인세 사무처리규정" |
+
+**법률 → 행정규칙 연결 예시:**
+- 개인정보보호법 → "개인정보 보호법 시행령" → **"개인정보 보호법 위반에 대한 과징금 부과기준"** (고시)
+- 건축법 → "건축법 시행령" → **"건축물의 에너지절약설계기준"** (고시)
+- 의료법 → "의료법 시행규칙" → **"의료기관 인증기준"** (고시)
 
 ### 1-1. 정확한 법령명 검색 (exact) ⭐ NEW
 ```bash
 python scripts/fetch_law.py exact "상법"        # 정확히 "상법"만 검색
 python scripts/fetch_law.py exact "민법"        # 관련 시행령/시행규칙도 표시
 python scripts/fetch_law.py exact "근로기준법"
+
+# 관련 행정규칙(고시/훈령/예규)도 함께 검색 ⭐ RECOMMENDED
+python scripts/fetch_law.py exact "개인정보보호법" --with-admrul
+python scripts/fetch_law.py exact "근로기준법" --with-admrul
 ```
 > ⚠️ **주의**: `search "상법"`은 "보상법", "손해배상법" 등 부분 일치 결과도 반환합니다.
 > 정확한 법령명을 찾으려면 `exact` 명령을 사용하세요.
+
+> 💡 **실무 팁**: `--with-admrul` 옵션으로 관련 행정규칙도 함께 확인하세요!
+> 법률은 큰 틀만 정하고, 구체적인 기준/절차/서식은 행정규칙에서 정합니다.
 
 ### 2. 판례 검색 (cases)
 ```bash
@@ -117,14 +152,16 @@ python scripts/fetch_bill.py votes --bill-no 2205704    # 의안번호로 표결
 
 ## 검색 대상 코드 (target)
 
-| 코드 | 대상 | 설명 |
-|------|------|------|
-| `law` | 법령 | 법률, 대통령령, 부령 등 |
-| `prec` | 판례 | 대법원, 하급심 판결 |
-| `ordin` | 자치법규 | 조례, 규칙 |
-| `admrul` | 행정규칙 | 훈령, 예규, 고시 |
-| `expc` | 법령해석례 | 법제처 해석 |
-| `detc` | 헌재결정례 | 헌법재판소 결정 |
+| 코드 | 대상 | 설명 | 건수 |
+|------|------|------|------|
+| `law` | 법령 | 법률, 대통령령, 부령 등 | ~5,500 |
+| `admrul` | **행정규칙** | **고시, 훈령, 예규 (실무 핵심!)** | **~23,500** |
+| `prec` | 판례 | 대법원, 하급심 판결 | ~330,000 |
+| `ordin` | 자치법규 | 조례, 규칙 | ~160,000 |
+| `expc` | 법령해석례 | 법제처 해석 | ~23,000 |
+| `detc` | 헌재결정례 | 헌법재판소 결정 | ~5,000 |
+
+> **실무 팁**: 법률(law)만 확인하면 안 됩니다! **행정규칙(admrul)**에 실제 적용 기준이 있습니다.
 
 ## 주요 법률 분야 검색 가이드
 
@@ -235,6 +272,21 @@ python3 .claude/skills/beopsuny/scripts/fetch_law.py search "민법"
 3. 이미 다운로드된 파일이 있으면 재사용 (Glob으로 `data/raw/` 확인)
 4. 조문 인용 시 `scripts/gen_link.py`로 검증 가능한 링크 생성
 5. **시행일자 반드시 확인** - 미시행 법령은 명확히 표시
+
+### 행정규칙 관련 질문 처리 ⭐ IMPORTANT
+> **실무자 피드백**: 법률만 보면 안 됩니다! 구체적인 적용 기준은 행정규칙에 있습니다.
+
+1. **실무 적용 질문**시 반드시 행정규칙도 함께 검색
+   - 예: "과징금 기준이 어떻게 되나요?" → 법률 + `--type admrul` 검색 필수
+   - 예: "인증 절차가 어떻게 되나요?" → 행정규칙에 구체적 절차 명시
+2. **행정규칙 검색 패턴**
+   ```bash
+   # 법률명 + "고시" 또는 "기준" 키워드
+   python scripts/fetch_law.py search "개인정보보호법 과징금" --type admrul
+   python scripts/fetch_law.py search "부과기준" --type admrul
+   ```
+3. **법률 → 시행령 → 행정규칙** 순서로 체계적 검토 권장
+4. 행정규칙 인용 형식: "「○○○○」(○○부 고시 제○○○○-○호)"
 
 ### API 제한사항 인지
 - 국가법령정보센터 API는 **부분 문자열 검색**만 지원

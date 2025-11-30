@@ -639,12 +639,13 @@ def get_recent_laws(days: int = 30, from_date: str = None, to_date: str = None, 
     return results
 
 
-def search_exact_law(name: str):
+def search_exact_law(name: str, with_admrul: bool = False):
     """
     정확한 법령명으로 검색 (클라이언트측 필터링)
 
     Args:
         name: 정확한 법령명 (예: "상법", "민법")
+        with_admrul: 관련 행정규칙도 함께 검색 여부
 
     Note:
         API는 부분 일치 검색만 지원하므로, 결과에서 정확히 일치하는 것만 필터링
@@ -729,7 +730,88 @@ def search_exact_law(name: str):
         print(f"💡 힌트: '{name}'을 포함하는 법령을 검색하려면:")
         print(f"   python scripts/fetch_law.py search \"{name}\"")
 
+    # 관련 행정규칙 검색
+    if with_admrul:
+        print(f"\n{'='*60}")
+        print(f"📋 관련 행정규칙 (고시/훈령/예규) 검색 중...")
+        print(f"{'='*60}")
+        search_related_admin_rules(name)
+
     return results
+
+
+def search_related_admin_rules(law_name: str, display: int = 10):
+    """
+    법령명과 관련된 행정규칙 검색
+
+    Args:
+        law_name: 법령명 (예: "개인정보보호법", "근로기준법")
+        display: 표시할 결과 수
+    """
+    oc = load_config()
+
+    # 다양한 검색 패턴 시도
+    search_terms = [
+        law_name,  # 법령명 그대로
+        f"{law_name} 시행",  # 시행 관련
+        f"{law_name} 기준",  # 기준 관련
+    ]
+
+    all_results = []
+    seen_ids = set()
+
+    for term in search_terms:
+        params = {
+            'OC': oc,
+            'target': 'admrul',
+            'type': 'XML',
+            'query': term,
+            'display': display,
+        }
+
+        try:
+            root = api_request('lawSearch.do', params)
+
+            for item in root.findall('.//admrul'):
+                admrul_id = item.findtext('행정규칙일련번호', '')
+                if admrul_id in seen_ids:
+                    continue
+                seen_ids.add(admrul_id)
+
+                admrul_name = item.findtext('행정규칙명', '')
+                admrul_type = item.findtext('행정규칙종류', '')
+                promul_date = item.findtext('발령일자', '')
+                enforce_date = item.findtext('시행일자', '')
+                ministry = item.findtext('소관부처명', '')
+
+                all_results.append({
+                    'id': admrul_id,
+                    'name': admrul_name,
+                    'type': admrul_type,
+                    'promul_date': promul_date,
+                    'enforce_date': enforce_date,
+                    'ministry': ministry,
+                })
+        except Exception:
+            continue
+
+    if all_results:
+        print(f"\n=== '{law_name}' 관련 행정규칙 (총 {len(all_results)}건) ===\n")
+        print("⚠️  실무 팁: 법률은 큰 틀만 정합니다. 구체적인 기준/절차/서식은")
+        print("   아래 행정규칙(고시/훈령/예규)에서 확인하세요!\n")
+
+        for r in all_results[:display]:
+            print(f"📋 [{r['type']}] {r['name']}")
+            print(f"   ID: {r['id']}")
+            print(f"   소관: {r['ministry']}")
+            print(f"   발령일: {r['promul_date']} | 시행일: {r['enforce_date']}")
+            print(f"   링크: https://www.law.go.kr/행정규칙/{urllib.parse.quote(r['name'])}")
+            print()
+    else:
+        print(f"\n'{law_name}' 관련 행정규칙을 찾지 못했습니다.")
+        print(f"💡 직접 검색: python scripts/fetch_law.py search \"{law_name}\" --type admrul")
+
+    return all_results
 
 
 def fetch_case_by_id(case_id: str, save: bool = True):
@@ -839,6 +921,8 @@ def main():
     # exact 명령 (정확한 법령명 검색)
     exact_parser = subparsers.add_parser('exact', help='정확한 법령명 검색 (예: 상법, 민법)')
     exact_parser.add_argument('name', help='정확한 법령명')
+    exact_parser.add_argument('--with-admrul', action='store_true',
+                              help='관련 행정규칙(고시/훈령/예규)도 함께 검색')
 
     # fetch 명령
     fetch_parser = subparsers.add_parser('fetch', help='법령/판례 다운로드')
@@ -863,7 +947,7 @@ def main():
     if args.command == 'search':
         search_laws(args.query, args.type, args.display, args.page, args.sort)
     elif args.command == 'exact':
-        search_exact_law(args.name)
+        search_exact_law(args.name, with_admrul=args.with_admrul)
     elif args.command == 'cases':
         search_cases(args.query, args.court, args.from_date, args.display, args.page)
     elif args.command == 'fetch':

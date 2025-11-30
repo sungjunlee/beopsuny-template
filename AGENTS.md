@@ -27,7 +27,24 @@
 2. `recent` 명령으로 최근 개정 여부 확인
 3. 가능하면 **복수의 출처**로 교차 확인 (law.go.kr + 판례 검색 사이트)
 
-## 3. 환각 방지 (Hallucination Prevention)
+## 3. 행정규칙 확인 (Administrative Rules) ⭐ IMPORTANT
+
+### 실무자 피드백
+> "법률이 바뀌는 것도 중요하지만, 실제로 적용되는 부분은 **고시, 훈령, 예규**에서 정하는 경우가 많습니다."
+
+### 필수 확인 사항
+- ✅ 구체적인 **기준/절차/서식**은 행정규칙 검색 필수
+- ✅ **과징금/과태료 부과기준**은 대부분 고시에서 규정
+- ✅ 법률 → 시행령 → **행정규칙** 순서로 체계적 확인
+
+### 검색 방법
+```bash
+# 행정규칙 검색 (고시, 훈령, 예규)
+python .claude/skills/beopsuny/scripts/fetch_law.py search "과징금 부과기준" --type admrul
+python .claude/skills/beopsuny/scripts/fetch_law.py search "인증기준" --type admrul
+```
+
+## 4. 환각 방지 (Hallucination Prevention)
 
 ### 금지 사항
 - ❌ 조문 번호나 내용을 **추측**하지 말 것
@@ -39,7 +56,7 @@
 - ✅ API 검색 결과가 없으면 **"검색 결과 없음"** 명시
 - ✅ 불확실한 정보는 **웹검색으로 추가 검증**
 
-## 4. 시간적 정확성 (Temporal Accuracy)
+## 5. 시간적 정확성 (Temporal Accuracy)
 
 ### 시행일 명시
 - 모든 법령 인용 시 시행일 표기: "민법 제750조 (시행 2025.1.31.)"
@@ -49,7 +66,7 @@
 - 법령 개정안이 국회 계류 중인지 `fetch_bill.py`로 확인
 - 최근 공포되었으나 미시행인 개정 사항 안내
 
-## 5. 면책 고지 (Disclaimer)
+## 6. 면책 고지 (Disclaimer)
 
 모든 법률 분석 답변 마지막에 포함:
 
@@ -82,6 +99,15 @@ python .claude/skills/beopsuny/scripts/fetch_law.py cases "불법행위 손해�
 # 특정 법원 판례
 python .claude/skills/beopsuny/scripts/fetch_law.py cases "해고" --court 대법원
 ```
+
+### 행정규칙 검색 (고시/훈령/예규) ⭐ IMPORTANT
+```bash
+# 행정규칙 검색 - 실무 적용 기준 확인 필수!
+python .claude/skills/beopsuny/scripts/fetch_law.py search "과징금 부과기준" --type admrul
+python .claude/skills/beopsuny/scripts/fetch_law.py search "개인정보" --type admrul
+python .claude/skills/beopsuny/scripts/fetch_law.py search "금융위원회" --type admrul
+```
+> 법률은 큰 틀만 정하고, 구체적인 **기준/절차/서식**은 행정규칙에서 정합니다.
 
 ### 개정 확인
 ```bash
