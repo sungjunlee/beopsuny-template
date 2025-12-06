@@ -66,6 +66,7 @@ fetch_law.py cases "해고" --court 대법원 --from 20240101
 fetch_law.py fetch --name "민법"
 fetch_law.py fetch --name "민법" --with-decree  # 시행령 포함
 fetch_law.py fetch --case "2022다12345"         # 판례
+fetch_law.py fetch --id 2100000259318 --type admrul  # 행정규칙 (ID로)
 ```
 
 ### 개정 확인
