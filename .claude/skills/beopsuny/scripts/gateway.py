@@ -56,6 +56,11 @@ def _load_config() -> dict:
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             _config_cache = yaml.safe_load(f) or {}
     else:
+        # 설정 파일을 찾지 못한 경우 디버그 정보 출력
+        import sys
+        print(f"[DEBUG] Config not found at: {CONFIG_PATH}", file=sys.stderr)
+        print(f"[DEBUG] SCRIPT_DIR: {SCRIPT_DIR}", file=sys.stderr)
+        print(f"[DEBUG] __file__: {__file__}", file=sys.stderr)
         _config_cache = {}
 
     return _config_cache

@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  proxy-wrapper:
+    image: python:3.11-slim
+    container_name: beopsuny-proxy-wrapper
+    restart: always
+    ports:
+      - "3129:3129"
+    environment:
+      - UPSTREAM_PROXY=host.docker.internal:3128  # Synology Proxy
+      - PROXY_USER=proxyuser
+      - PROXY_PASS=proxy.chulnas
+      - PORT=3129
+    volumes:
+      - ./proxy_wrapper.py:/app/proxy_wrapper.py:ro
+    working_dir: /app
+    command: python -u proxy_wrapper.py
+    network_mode: host  # Synology Proxy 접근 위해
