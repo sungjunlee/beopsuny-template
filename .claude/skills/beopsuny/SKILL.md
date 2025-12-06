@@ -411,42 +411,40 @@ Claude Desktop/Web에서 이 skill을 사용하려면 **네트워크 egress 설�
 
 > **참고**: 도메인이 허용되지 않으면 "mismatched tag" XML 파싱 에러 또는 403 에러가 발생합니다.
 
-## 해외 접근 설정 (프록시)
+## 해외 접근 설정 (게이트웨이)
 
-한국 정부 API는 해외 IP를 차단합니다. Claude Code Web, Codex Web 등 해외 환경에서는 프록시 설정이 필요합니다.
+한국 정부 API는 해외 IP를 차단합니다. Claude Code Web 등 해외 환경에서는 게이트웨이 설정이 필요합니다.
 
-### 프록시 상태 확인
+### 게이트웨이 상태 확인
 
 ```bash
-python scripts/proxy_utils.py
+python scripts/gateway.py
 # 또는
-python scripts/fetch_policy.py proxy-status
+python scripts/fetch_policy.py gateway-status
 ```
 
-### 옵션 1: Cloudflare Workers (무료, 권장)
+### 설정 방법
+
+cors-anywhere 기반 게이트웨이를 통해 한국 정부 API에 접근합니다.
+URL은 Base64URL로 인코딩되어 Cloudflare WAF를 우회합니다.
 
 ```bash
-# 1. Worker 배포 (cloudflare-worker/ 참조)
-# 2. 환경변수 설정
-export BEOPSUNY_PROXY_TYPE=cloudflare
-export BEOPSUNY_PROXY_URL='https://your-worker.workers.dev'
+# 환경변수 설정 (권장)
+export BEOPSUNY_GATEWAY_URL='https://your-gateway.example.com'
+export BEOPSUNY_GATEWAY_API_KEY='your-api-key'  # 선택 (게이트웨이 인증 설정 시)
 ```
 
-### 옵션 2: Bright Data (유료)
+또는 `config/settings.yaml`에 설정:
 
-```bash
-export BEOPSUNY_PROXY_TYPE=brightdata
-export BEOPSUNY_BRIGHTDATA_USERNAME='your-username'
-export BEOPSUNY_BRIGHTDATA_PASSWORD='your-password'
+```yaml
+gateway:
+  url: "https://your-gateway.example.com"
+  api_key: "your-api-key"  # 선택
 ```
 
 ### 자동 감지
 
-프록시가 설정되면 스크립트가 자동으로:
-1. 현재 IP 위치 감지
-2. 해외이면 프록시 사용, 국내이면 직접 접근
-
-자세한 설정: `docs/PROXY_SETUP.md`
+게이트웨이가 설정되면 스크립트가 자동으로 게이트웨이를 통해 API에 접근합니다.
 
 ## 외부 참고 사이트
 

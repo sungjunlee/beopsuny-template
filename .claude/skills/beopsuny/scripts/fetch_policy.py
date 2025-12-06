@@ -34,12 +34,12 @@ except ImportError:
 
 import yaml
 
-# 프록시 유틸리티 (해외 접근 지원)
+# 게이트웨이 유틸리티 (해외 접근 지원)
 try:
-    from proxy_utils import fetch_with_proxy, is_overseas, get_geo_status
-    HAS_PROXY_UTILS = True
+    from gateway import fetch_url as gateway_fetch_url, is_gateway_configured, get_geo_status
+    HAS_GATEWAY = True
 except ImportError:
-    HAS_PROXY_UTILS = False
+    HAS_GATEWAY = False
 
 # 스크립트 위치 기준으로 경로 설정
 SCRIPT_DIR = Path(__file__).parent
@@ -133,7 +133,7 @@ def ensure_data_dir():
 
 
 def fetch_url(url: str, timeout: int = 30) -> str:
-    """URL에서 데이터 가져오기 (해외 실행 시 자동 프록시)
+    """URL에서 데이터 가져오기 (게이트웨이 설정 시 자동 사용)
 
     Args:
         url: 요청할 URL
@@ -145,22 +145,21 @@ def fetch_url(url: str, timeout: int = 30) -> str:
     Raises:
         RuntimeError: 네트워크 오류 발생 시
     """
-    # 프록시 유틸리티 사용 가능하면 자동 프록시 처리
-    if HAS_PROXY_UTILS:
+    # 게이트웨이 유틸리티 사용 가능하면 자동 처리
+    if HAS_GATEWAY:
         try:
-            return fetch_with_proxy(url, timeout=timeout)
+            return gateway_fetch_url(url, timeout=timeout)
         except ValueError as e:
-            # 프록시 미설정 시 경고 후 직접 시도
-            if is_overseas():
-                print(f"Warning: {e}", file=sys.stderr)
-                print("Attempting direct connection...", file=sys.stderr)
+            # 게이트웨이 미설정 시 직접 시도
+            print(f"Note: {e}", file=sys.stderr)
+            print("Attempting direct connection...", file=sys.stderr)
 
-    # 직접 접근 (국내 또는 프록시 미설정)
+    # 직접 접근 (게이트웨이 미설정)
     try:
         req = urllib.request.Request(
             url,
             headers={
-                "User-Agent": "Mozilla/5.0 (compatible; Beopsuny/1.0; +https://github.com/sungjunlee/beopsuny-template)"
+                "User-Agent": "Mozilla/5.0 (compatible; Beopsuny/1.0; +https://github.com/sungjunlee/beopsuny)"
             },
         )
         with urllib.request.urlopen(req, timeout=timeout) as response:
@@ -599,47 +598,38 @@ def cmd_summary(args):
 
 
 # ============================================================
-# 프록시 상태 확인
+# 게이트웨이 상태 확인
 # ============================================================
 
 
-def cmd_proxy_status():
-    """프록시 상태 확인 명령"""
-    if not HAS_PROXY_UTILS:
-        print("⚠️  proxy_utils.py를 찾을 수 없습니다.")
-        print("   같은 디렉토리에 proxy_utils.py가 있는지 확인하세요.")
+def cmd_gateway_status():
+    """게이트웨이 상태 확인 명령"""
+    if not HAS_GATEWAY:
+        print("⚠️  gateway.py를 찾을 수 없습니다.")
+        print("   같은 디렉토리에 gateway.py가 있는지 확인하세요.")
         return
 
     status = get_geo_status()
 
     print("\n" + "=" * 50)
-    print("🌏 프록시 상태 확인")
+    print("🌏 게이트웨이 상태 확인")
     print("=" * 50)
 
-    print(f"\n📍 현재 위치")
-    print(f"   IP: {status['ip']}")
-    print(f"   국가: {status['country']}")
-    print(f"   해외 여부: {'예 (프록시 필요)' if status['is_overseas'] else '아니오 (국내)'}")
+    print(f"\n⚙️  게이트웨이 설정")
+    print(f"   설정됨: {'예' if status['gateway_configured'] else '아니오'}")
+    if status['gateway_configured']:
+        print(f"   URL: {status['gateway_url']}")
+        print(f"   API 키: {'설정됨' if status['has_api_key'] else '없음'}")
 
-    print(f"\n⚙️  프록시 설정")
-    print(f"   설정됨: {'예' if status['proxy_configured'] else '아니오'}")
-    if status['proxy_configured']:
-        print(f"   유형: {status['proxy_type']}")
-
-    if status['is_overseas'] and not status['proxy_configured']:
+    if not status['gateway_configured']:
         print("\n" + "-" * 50)
-        print("⚠️  해외에서 실행 중이지만 프록시가 설정되지 않았습니다.")
-        print("   한국 정부 API 접근이 차단될 수 있습니다.")
+        print("⚠️  게이트웨이가 설정되지 않았습니다.")
+        print("   해외에서 한국 정부 API 접근이 차단될 수 있습니다.")
         print("\n📋 설정 방법:")
-        print("   [Cloudflare Workers - 무료 권장]")
-        print("   export BEOPSUNY_PROXY_TYPE=cloudflare")
-        print("   export BEOPSUNY_PROXY_URL='https://your-worker.workers.dev'")
-        print("\n   [Bright Data - 유료]")
-        print("   export BEOPSUNY_PROXY_TYPE=brightdata")
-        print("   export BEOPSUNY_BRIGHTDATA_USERNAME='your-username'")
-        print("   export BEOPSUNY_BRIGHTDATA_PASSWORD='your-password'")
+        print("   export BEOPSUNY_GATEWAY_URL='https://your-gateway.example.com'")
+        print("   export BEOPSUNY_GATEWAY_API_KEY='your-api-key'  # 선택")
     else:
-        print("\n✅ 프록시 상태 정상")
+        print("\n✅ 게이트웨이 설정 완료")
 
 
 # ============================================================
@@ -697,14 +687,14 @@ Available dept codes: ftc, moel, fsc, pipc, moleg
     summary_parser = subparsers.add_parser("summary", help="정책 동향 종합 요약")
     summary_parser.add_argument("--days", "-d", type=int, default=7, help="검색 기간 (일)")
 
-    # proxy-status 명령
-    proxy_parser = subparsers.add_parser("proxy-status", help="프록시 상태 확인")
+    # gateway-status 명령
+    gateway_parser = subparsers.add_parser("gateway-status", help="게이트웨이 상태 확인")
 
     args = parser.parse_args()
 
-    # 프록시 상태 명령
-    if args.command == "proxy-status":
-        cmd_proxy_status()
+    # 게이트웨이 상태 명령
+    if args.command == "gateway-status":
+        cmd_gateway_status()
         return
 
     if args.command == "rss":
