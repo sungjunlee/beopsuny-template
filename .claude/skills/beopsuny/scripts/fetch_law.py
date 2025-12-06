@@ -485,17 +485,18 @@ def find_cached_law(law_id: str = None, law_name: str = None) -> Path | None:
     return None
 
 
-def fetch_law_by_id(law_id: str, save: bool = True, force: bool = False):
+def fetch_law_by_id(law_id: str, save: bool = True, force: bool = False, target: str = "law"):
     """
-    법령 ID로 본문 조회
+    법령/행정규칙 등 ID로 본문 조회
 
     Args:
-        law_id: 법령 일련번호
+        law_id: 법령/행정규칙 일련번호
         save: 파일로 저장 여부
         force: 캐시 무시하고 강제 다운로드
+        target: 검색 대상 (law, admrul, prec, ordin, expc, detc)
     """
-    # 캐시 확인
-    if not force:
+    # 캐시 확인 (법령만)
+    if not force and target == "law":
         cached = find_cached_law(law_id=law_id)
         if cached:
             print(f"\n✅ 캐시된 파일 사용: {cached}")
@@ -513,32 +514,51 @@ def fetch_law_by_id(law_id: str, save: bool = True, force: bool = False):
 
     params = {
         'OC': oc,
-        'target': 'law',
+        'target': target,
         'type': 'XML',
         'ID': law_id,
     }
 
     root = api_request('lawService.do', params)
 
-    # 기본 정보 추출
-    law_name = root.findtext('.//법령명_한글', '') or root.findtext('.//법령명', '')
-    promul_date = root.findtext('.//공포일자', '')
-    enforce_date = root.findtext('.//시행일자', '')
+    # target 타입에 따라 다른 필드 추출
+    if target == 'admrul':
+        # 행정규칙
+        item_name = root.findtext('.//행정규칙명', '') or root.findtext('.//행정규칙명한글', '')
+        promul_date = root.findtext('.//발령일자', '')
+        enforce_date = root.findtext('.//시행일자', '')
+        ministry = root.findtext('.//소관부처', '') or root.findtext('.//소관부처명', '')
+        admrul_type = root.findtext('.//행정규칙종류', '')
 
-    print(f"\n=== {law_name} ===")
-    print(f"공포일: {promul_date} | 시행일: {enforce_date}")
+        print(f"\n=== [{admrul_type}] {item_name} ===")
+        print(f"소관: {ministry}")
+        print(f"발령일: {promul_date} | 시행일: {enforce_date}")
 
-    if save:
-        # 파일명에서 특수문자 제거
-        safe_name = "".join(c for c in law_name if c.isalnum() or c in (' ', '_', '-')).strip()
-        filename = f"{safe_name}_{law_id}.xml"
-        filepath = DATA_RAW_DIR / filename
+        if save:
+            safe_name = "".join(c for c in item_name if c.isalnum() or c in (' ', '_', '-')).strip()
+            filename = f"{safe_name}_{law_id}.xml"
+            filepath = DATA_RAW_DIR / "admrul" / filename
+            filepath.parent.mkdir(parents=True, exist_ok=True)
+            tree = ET.ElementTree(root)
+            tree.write(filepath, encoding='utf-8', xml_declaration=True)
+            print(f"\n저장됨: {filepath}")
+    else:
+        # 법령 (기본)
+        item_name = root.findtext('.//법령명_한글', '') or root.findtext('.//법령명', '')
+        promul_date = root.findtext('.//공포일자', '')
+        enforce_date = root.findtext('.//시행일자', '')
 
-        # XML 저장
-        DATA_RAW_DIR.mkdir(parents=True, exist_ok=True)
-        tree = ET.ElementTree(root)
-        tree.write(filepath, encoding='utf-8', xml_declaration=True)
-        print(f"\n저장됨: {filepath}")
+        print(f"\n=== {item_name} ===")
+        print(f"공포일: {promul_date} | 시행일: {enforce_date}")
+
+        if save:
+            safe_name = "".join(c for c in item_name if c.isalnum() or c in (' ', '_', '-')).strip()
+            filename = f"{safe_name}_{law_id}.xml"
+            filepath = DATA_RAW_DIR / filename
+            DATA_RAW_DIR.mkdir(parents=True, exist_ok=True)
+            tree = ET.ElementTree(root)
+            tree.write(filepath, encoding='utf-8', xml_declaration=True)
+            print(f"\n저장됨: {filepath}")
 
     return root
 
@@ -971,10 +991,13 @@ def main():
                               help='관련 행정규칙(고시/훈령/예규)도 함께 검색')
 
     # fetch 명령
-    fetch_parser = subparsers.add_parser('fetch', help='법령/판례 다운로드')
-    fetch_parser.add_argument('--id', help='법령/판례 ID')
+    fetch_parser = subparsers.add_parser('fetch', help='법령/판례/행정규칙 다운로드')
+    fetch_parser.add_argument('--id', help='법령/판례/행정규칙 ID')
     fetch_parser.add_argument('--name', help='법령명')
     fetch_parser.add_argument('--case', help='판례 사건번호 (예: 2022다12345)')
+    fetch_parser.add_argument('--type', default='law',
+                              choices=['law', 'admrul', 'prec', 'ordin', 'expc', 'detc'],
+                              help='다운로드 대상 (law: 법령, admrul: 행정규칙, prec: 판례 등)')
     fetch_parser.add_argument('--with-decree', action='store_true',
                               help='시행령/시행규칙도 함께 다운로드')
     fetch_parser.add_argument('--force', action='store_true',
@@ -1000,7 +1023,7 @@ def main():
         if args.case:
             fetch_case_by_number(args.case)
         elif args.id:
-            fetch_law_by_id(args.id, force=args.force)
+            fetch_law_by_id(args.id, force=args.force, target=args.type)
         elif args.name:
             fetch_law_by_name(args.name, args.with_decree, args.force)
         else:
