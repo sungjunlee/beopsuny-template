@@ -22,37 +22,23 @@ oc_code: "your_oc_code"
 # assembly_api_key: "your_api_key"
 
 # ============================================================
-# 프록시 설정 (해외 접근용)
-# Proxy Settings (for overseas access)
+# 게이트웨이 설정 (해외 접근용)
+# Gateway Settings (for overseas access)
 # ============================================================
 # 한국 정부 API는 해외 IP를 차단합니다.
-# Claude Code Web, Codex Web 등 해외 환경에서 사용 시 프록시 설정이 필요합니다.
+# Claude Code Web 등 해외 환경에서 사용 시 게이트웨이 설정이 필요합니다.
 #
-# 환경변수로도 설정 가능:
-#   export BEOPSUNY_PROXY_TYPE=cloudflare
-#   export BEOPSUNY_PROXY_URL="https://your-worker.workers.dev"
+# cors-anywhere 기반 게이트웨이를 통해 접근합니다.
+# URL은 Base64URL로 인코딩되어 Cloudflare WAF를 우회합니다.
 #
-# Bright Data 사용 시:
-#   export BEOPSUNY_PROXY_TYPE=brightdata
-#   export BEOPSUNY_BRIGHTDATA_USERNAME="your-username"
-#   export BEOPSUNY_BRIGHTDATA_PASSWORD="your-password"
+# 환경변수로도 설정 가능 (환경변수가 우선함):
+#   export BEOPSUNY_GATEWAY_URL="https://your-gateway.example.com"
+#   export BEOPSUNY_GATEWAY_API_KEY="your-api-key"  # 선택
 # ============================================================
 
-# proxy:
-#   # 프록시 유형: cloudflare (권장, 무료), brightdata (유료), http
-#   type: "cloudflare"
+# gateway:
+#   # cors-anywhere 게이트웨이 URL
+#   url: "https://your-gateway.example.com"
 #
-#   # Cloudflare Workers URL (type: cloudflare 일 때)
-#   # 배포 방법: cloudflare-worker/README.md 참조
-#   url: "https://your-worker.your-account.workers.dev"
-#
-#   # Bright Data 설정 (type: brightdata 일 때)
-#   # brightdata:
-#   #   username: "your-zone-username"
-#   #   password: "your-password"
-#
-#   # 강제 프록시 사용 (국내에서도 프록시 사용)
-#   # force_proxy: false
-#
-#   # 지역 체크 스킵 (항상 국내로 간주)
-#   # skip_geo_check: false
+#   # API 키 (게이트웨이에서 인증 설정 시)
+#   # api_key: "your-api-key"
