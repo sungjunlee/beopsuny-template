@@ -172,10 +172,18 @@ def fetch_with_gateway(
                 f"Check your API key: {ENV_GATEWAY_API_KEY}"
             ) from e
         elif e.code == 403:
-            raise RuntimeError(
-                f"Gateway access forbidden (403).\n"
-                f"The gateway may have blocked this request."
-            ) from e
+            config = get_gateway_config()
+            if not config.get("api_key"):
+                raise RuntimeError(
+                    "Gateway access forbidden (403).\n"
+                    "API key is required but not configured.\n"
+                    f"Set {ENV_GATEWAY_API_KEY} environment variable or add api_key to settings.yaml"
+                ) from e
+            else:
+                raise RuntimeError(
+                    "Gateway access forbidden (403).\n"
+                    "The API key may be invalid or the gateway blocked this request."
+                ) from e
         raise RuntimeError(f"Gateway HTTP error: {e.code} {e.reason}") from e
     except urllib.error.URLError as e:
         raise RuntimeError(f"Gateway URL error: {e.reason}") from e
