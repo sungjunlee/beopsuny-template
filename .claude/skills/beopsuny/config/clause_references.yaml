@@ -562,16 +562,16 @@ clauses:
     korean_law:
       primary:
         - law: 개인정보 보호법
-          articles: ["제15조", "제17조", "제28조", "제28조의8", "제29조"]
+          articles: ["제15조", "제17조", "제26조", "제28조의8", "제28조의9", "제29조"]
           description: 수집동의, 제3자 제공, 위탁, 국외 이전, 안전조치
           fetch_command: "fetch_law.py exact '개인정보 보호법'"
-        - law: 정보통신망 이용촉진 및 정보보호 등에 관한 법률
-          articles: ["제24조의2", "제25조"]
-          description: 동의 철회, 개인정보 위탁
+          note: 2020년 데이터3법 개정으로 정보통신망법 개인정보 규정이 개인정보보호법으로 통합됨
       admin_rules:
         - name: 개인정보의 안전성 확보조치 기준
           fetch_command: "fetch_law.py search '안전성 확보조치' --type admrul"
         - name: 표준 개인정보 처리위탁 계약서
+          authority: 개인정보보호위원회
+        - name: 개인정보 국외 이전 운영 등에 관한 규정
           authority: 개인정보보호위원회
       considerations:
         - 가명정보, 익명정보 구분
@@ -767,9 +767,6 @@ clauses:
         - law: 부정경쟁방지 및 영업비밀보호에 관한 법률
           articles: ["제2조 제2호", "제10조", "제18조"]
           description: 영업비밀 정의, 침해금지, 벌칙
-        - law: 근로기준법
-          articles: ["제26조"]
-          description: 해고 예고
       considerations:
         - 퇴직 후 비밀유지 의무 범위
         - 영업비밀 vs 일반 비밀정보

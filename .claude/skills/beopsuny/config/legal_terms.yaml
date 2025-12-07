@@ -25,9 +25,9 @@
 #       en: 영문 예시
 #       ko: 한국어 예시
 
-version: "1.0.0"
-last_updated: "2024-12-07"
-total_terms: 100
+version: "1.0.1"
+last_updated: "2025-12-07"
+total_terms: 99
 
 categories:
   - id: contract_formation
@@ -35,7 +35,7 @@ categories:
     count: 15
   - id: obligations
     name_ko: 의무/책임
-    count: 20
+    count: 19
   - id: remedies
     name_ko: 구제수단
     count: 15
