@@ -1239,11 +1239,13 @@ def main():
     args = parser.parse_args()
 
     if args.command == 'search':
-        search_laws(args.query, args.type, args.display, args.page, args.sort, args.format)
+        search_laws(args.query, target=args.type, display=args.display, page=args.page,
+                    sort=args.sort, output_format=args.format)
     elif args.command == 'exact':
         search_exact_law(args.name, with_admrul=args.with_admrul, output_format=args.format)
     elif args.command == 'cases':
-        search_cases(args.query, args.court, args.from_date, args.display, args.page, args.format)
+        search_cases(args.query, court=args.court, from_date=args.from_date,
+                     display=args.display, page=args.page, output_format=args.format)
     elif args.command == 'fetch':
         if args.case:
             fetch_case_by_number(args.case)
