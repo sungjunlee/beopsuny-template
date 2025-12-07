@@ -2,12 +2,17 @@
 # 계약 조항 - 한국 법령 매핑 레퍼런스
 # Contract Clause to Korean Law Reference Database
 # ============================================================
-# Claude가 영문 계약서 검토 시 관련 한국 법령을 신속히 조회할 수 있도록 지원
+# Claude가 계약서 검토 시 관련 한국 법령을 신속히 조회할 수 있도록 지원
 #
 # 사용법:
 #   1. Claude가 계약서 조항 유형 식별
 #   2. 해당 조항의 korean_law 섹션 참조
 #   3. fetch_law.py로 상세 조문 확인
+#   4. 판례는 case_search 키워드로 실시간 검색 (하드코딩 X)
+#
+# 설계 원칙:
+#   - 법령: 조문 번호 매핑 (API로 최신 내용 조회)
+#   - 판례: 검색 키워드만 제공 (판례는 변경될 수 있음)
 # ============================================================
 
 version: "1.0.0"
@@ -16,6 +21,9 @@ disclaimer: |
   이 레퍼런스는 일반적인 참고 자료이며, 구체적인 계약 검토는
   변호사 자문이 필요합니다. 계약서 유형과 상황에 따라
   적용 법령이 달라질 수 있습니다.
+
+  판례는 새로운 판결로 해석이 변경될 수 있으므로,
+  case_search 명령어로 항상 최신 판례를 검색하세요.
 
 # 조항 카테고리 정의
 categories:
@@ -71,9 +79,10 @@ clauses:
         - 한국 강행규정 회피 불가 (소비자보호, 근로자보호, 대리점법, 하도급법 등)
         - 중재 조항과의 관계 검토 필요
         - 한국법 선택 시 영문 해석 문제 발생 가능
-      related_cases:
-        - case: "대법원 2019. 6. 13. 선고 2016다33752 판결"
-          point: 준거법 합의의 효력 범위
+      case_search:
+        keywords: ["준거법", "국제사법", "당사자 자치"]
+        fetch_command: "fetch_law.py cases '준거법' --court 대법원"
+        note: 판례는 변경될 수 있으므로 항상 최신 검색 권장
     review_points:
       - 한국법 강행규정 적용 여부 (예: 대리점법, 하도급법)
       - 외국법 지정 시 분쟁해결 비용 증가 가능성
@@ -704,9 +713,10 @@ clauses:
         - law: 헌법
           articles: ["제15조"]
           description: 직업선택의 자유
-      related_cases:
-        - case: "대법원 2010. 3. 11. 선고 2009다82244 판결"
-          point: 전직금지약정 유효 요건 (보호이익, 기간, 지역, 대가)
+      case_search:
+        keywords: ["경업금지", "전직금지", "경쟁업체 취업"]
+        fetch_command: "fetch_law.py cases '경업금지' --court 대법원"
+        note: 경업금지 판례는 사안별로 다름, 최신 판례 반드시 확인
       considerations:
         - 한국 판례상 경업금지 제한적 인정
         - 합리적 범위 (기간 1-2년, 지역, 업종)
@@ -906,6 +916,9 @@ _template:
       primary: []
       admin_rules: []
       considerations: []
-      related_cases: []
+      case_search:
+        keywords: []
+        fetch_command: ""
+        note: 판례는 변경될 수 있으므로 항상 최신 검색 권장
     review_points: []
     risk_level: ""  # low, medium, high
