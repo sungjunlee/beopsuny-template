@@ -340,3 +340,86 @@ scenarios:
     validation:
       - type: case_reference
         description: 경업금지 판례 참조하는지
+
+  # ============================================
+  # 횡단 이슈 테스트 (3개) - Phase 0 커버리지
+  # ============================================
+
+  - id: contract-13
+    name: 횡단 이슈 - 국제거래 원천징수
+    persona: 재무팀 담당자
+    context: |
+      미국 SaaS 회사와 연간 라이선스 계약 체결 예정
+    question: |
+      미국 회사에 연 5만불 SaaS 라이선스료를 지급하는 계약인데,
+      세금 관련해서 확인해야 할 게 있나요?
+    expected:
+      response_contains:
+        - 법인세법
+        - 원천징수
+        - 제93조
+        - 제98조
+        - 조세조약
+      should_check:
+        - 원천징수 세율 (기본 22% vs 조세조약)
+        - 한미 조세조약 적용 여부
+        - 계약서 내 세금 부담 조항
+    reference_files:
+      - docs/contract_review_guide.md  # Phase 0 국제거래
+    command: |
+      python .claude/skills/beopsuny/scripts/fetch_law.py exact "법인세법"
+    validation:
+      - type: cross_cutting_issue
+        description: 국제거래 세금 이슈를 조항 검토 전에 인식하는지
+
+  - id: contract-14
+    name: 횡단 이슈 - 하도급법 적용
+    persona: 구매팀 담당자
+    context: |
+      대기업에서 중소 개발업체에 시스템 개발 발주 예정
+    question: |
+      우리 회사(대기업)가 중소 개발업체에 3억원 규모 시스템 개발을
+      발주하려고 하는데, 계약서 검토 시 특별히 주의할 게 있나요?
+    expected:
+      response_contains:
+        - 하도급법
+        - 하도급거래 공정화에 관한 법률
+        - 원사업자
+        - 수급사업자
+        - 서면
+      should_check:
+        - 하도급법 적용 대상 여부
+        - 서면 계약 의무
+        - 대금 지급 기한 (납품일로부터 60일)
+    reference_files:
+      - docs/contract_review_guide.md  # Phase 0 하도급
+    command: |
+      python .claude/skills/beopsuny/scripts/fetch_law.py exact "하도급거래 공정화에 관한 법률"
+    validation:
+      - type: cross_cutting_issue
+        description: 대기업-중소기업 용역 계약에서 하도급법 적용을 인식하는지
+
+  - id: contract-15
+    name: 횡단 이슈 - 전자용역 부가세
+    persona: 세무팀 담당자
+    context: |
+      해외 클라우드 서비스(AWS 등) 이용 계약 검토
+    question: |
+      AWS 같은 해외 클라우드 서비스를 쓰는데,
+      부가세는 어떻게 되나요?
+    expected:
+      response_contains:
+        - 부가가치세법
+        - 전자적 용역
+        - 제53조의2
+        - 해외사업자
+      should_explain:
+        - 2019년 이후 해외 전자용역 공급자 직접 납부
+        - B2B 거래 시 역과세 가능
+    reference_files:
+      - docs/contract_review_guide.md  # Phase 0 국제거래
+    command: |
+      python .claude/skills/beopsuny/scripts/fetch_law.py exact "부가가치세법"
+    validation:
+      - type: cross_cutting_issue
+        description: 전자용역 부가세 이슈를 인식하는지

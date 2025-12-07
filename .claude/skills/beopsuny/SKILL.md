@@ -224,6 +224,29 @@ export BEOPSUNY_GATEWAY_API_KEY='your-api-key'
 → 한국법상 무효
 ```
 
+### 횡단 이슈 체크 ⭐ (국제거래/하도급)
+
+> 조항별 검토 **전에** 계약 전체 맥락에서 적용되는 법령 확인
+
+**국제거래 (해외법인 상대방):**
+```bash
+# 원천징수 (외국법인 지급액)
+fetch_law.py exact "법인세법"        # 제93조 국내원천소득, 제98조 원천징수
+fetch_law.py exact "조세특례제한법"   # 조세조약 적용 시
+
+# 전자용역 부가세 (SaaS 등)
+fetch_law.py exact "부가가치세법"     # 제53조의2 전자적 용역
+```
+
+**하도급 (대기업-중소기업 용역):**
+```bash
+# 원사업자-수급사업자 관계 시
+fetch_law.py exact "하도급거래 공정화에 관한 법률"
+fetch_law.py search "하도급" --type admrul   # 하도급 고시
+```
+
+→ 상세: `docs/contract_review_guide.md` Phase 0 참조
+
 ### 주의사항
 
 > ⚠️ 본 기능은 **초벌 검토 보조**용입니다.
