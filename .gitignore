@@ -44,3 +44,4 @@ beopsuny-skill.zip
 # Test results (regenerated on each run)
 tests/results/*.json
 tests/results/*.md
+tests/results/*.log
