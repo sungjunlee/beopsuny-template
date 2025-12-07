@@ -44,9 +44,48 @@ BASE_URL = "http://www.law.go.kr/DRF"
 # 환경변수 이름
 ENV_OC_CODE = "BEOPSUNY_OC_CODE"
 
+# 검색 대상 타입 표시명
+TARGET_TYPE_NAMES = {
+    'law': '법령',
+    'prec': '판례',
+    'ordin': '자치법규',
+    'admrul': '행정규칙',
+    'expc': '법령해석례',
+    'detc': '헌재결정례',
+}
+
+# 자치법규 종류 코드 매핑
+ORDIN_TYPE_MAP = {
+    'C0001': '조례',
+    'C0002': '규칙',
+}
+
 # 캐시
 _config_cache = None
 _law_index_cache = None
+
+
+def _sanitize_filename(name: str) -> str:
+    """파일명에서 특수문자 제거"""
+    return "".join(c for c in name if c.isalnum() or c in (' ', '_', '-')).strip()
+
+
+def _clean_html_text(text: str, preserve_breaks: bool = False, max_length: int = None) -> str:
+    """HTML 태그 제거 및 텍스트 정리
+
+    Args:
+        text: HTML이 포함된 텍스트
+        preserve_breaks: <br> 태그를 줄바꿈으로 변환할지 여부
+        max_length: 최대 길이 (초과시 ... 추가)
+    """
+    if preserve_breaks:
+        text = re.sub(r'<br\s*/?>', '\n', text)
+    text = re.sub(r'<[^>]+>', '', text)
+    text = text.strip()
+
+    if max_length and len(text) > max_length:
+        return text[:max_length] + "..."
+    return text
 
 
 def _load_config_file():
@@ -214,11 +253,7 @@ def search_laws(query: str, target: str = "law", display: int = 20, page: int = 
     # 결과 파싱 - target에 따라 다른 태그 사용
     total = root.findtext('.//totalCnt', '0')
 
-    target_names = {
-        'law': '법령', 'prec': '판례', 'ordin': '자치법규',
-        'admrul': '행정규칙', 'expc': '법령해석례', 'detc': '헌재결정례'
-    }
-    target_name = target_names.get(target, target)
+    target_name = TARGET_TYPE_NAMES.get(target, target)
 
     # JSON 출력 모드에서는 텍스트 출력 생략
     is_json = output_format == 'json'
@@ -520,7 +555,7 @@ def find_cached_law(law_id: str = None, law_name: str = None) -> Path | None:
         if law_id and law_id in filepath.name:
             return filepath
         if law_name:
-            safe_name = "".join(c for c in law_name if c.isalnum() or c in (' ', '_', '-')).strip()
+            safe_name = _sanitize_filename(law_name)
             if safe_name in filepath.name:
                 return filepath
     return None
@@ -569,11 +604,7 @@ def fetch_law_by_id(law_id: str, save: bool = True, force: bool = False, target:
     # API 오류 응답 감지 (일치하는 데이터 없음)
     error_text = root.text.strip() if root.text else ''
     if '일치하는' in error_text and '없습니다' in error_text:
-        target_names = {
-            'law': '법령', 'admrul': '행정규칙', 'ordin': '자치법규',
-            'prec': '판례', 'expc': '법령해석례', 'detc': '헌재결정례'
-        }
-        target_name = target_names.get(target, target)
+        target_name = TARGET_TYPE_NAMES.get(target, target)
         print(f"\n❌ 오류: ID '{law_id}'에 해당하는 {target_name}을(를) 찾을 수 없습니다.", file=sys.stderr)
         print(f"   API 응답: {error_text}", file=sys.stderr)
         sys.exit(1)
@@ -592,7 +623,7 @@ def fetch_law_by_id(law_id: str, save: bool = True, force: bool = False, target:
         print(f"발령일: {promul_date} | 시행일: {enforce_date}")
 
         if save:
-            safe_name = "".join(c for c in item_name if c.isalnum() or c in (' ', '_', '-')).strip()
+            safe_name = _sanitize_filename(item_name)
             filename = f"{safe_name}_{law_id}.xml"
             filepath = DATA_RAW_DIR / "admrul" / filename
             filepath.parent.mkdir(parents=True, exist_ok=True)
@@ -609,15 +640,14 @@ def fetch_law_by_id(law_id: str, save: bool = True, force: bool = False, target:
         ordin_type = root.findtext('.//자치법규종류', '')
 
         # 자치법규종류 코드를 한글로 변환
-        ordin_type_map = {'C0001': '조례', 'C0002': '규칙'}
-        ordin_type_name = ordin_type_map.get(ordin_type, ordin_type)
+        ordin_type_name = ORDIN_TYPE_MAP.get(ordin_type, ordin_type)
 
         print(f"\n=== [{ordin_type_name}] {item_name} ===")
         print(f"지자체: {local_gov}")
         print(f"공포일: {promul_date} | 시행일: {enforce_date}")
 
         if save:
-            safe_name = "".join(c for c in item_name if c.isalnum() or c in (' ', '_', '-')).strip()
+            safe_name = _sanitize_filename(item_name)
             filename = f"{safe_name}_{law_id}.xml"
             filepath = DATA_RAW_DIR / "ordin" / filename
             filepath.parent.mkdir(parents=True, exist_ok=True)
@@ -649,7 +679,7 @@ def fetch_law_by_id(law_id: str, save: bool = True, force: bool = False, target:
             print(answer[:500] + "..." if len(answer) > 500 else answer)
 
         if save:
-            safe_name = "".join(c for c in case_number if c.isalnum() or c in (' ', '_', '-')).strip()
+            safe_name = _sanitize_filename(case_number)
             filename = f"{safe_name}_{law_id}.xml"
             filepath = DATA_RAW_DIR / "expc" / filename
             filepath.parent.mkdir(parents=True, exist_ok=True)
@@ -674,15 +704,13 @@ def fetch_law_by_id(law_id: str, save: bool = True, force: bool = False, target:
         summary = root.findtext('.//결정요지', '')
         if points:
             print(f"\n【판시사항】")
-            points_clean = re.sub(r'<[^>]+>', '', points)
-            print(points_clean[:500] + "..." if len(points_clean) > 500 else points_clean)
+            print(_clean_html_text(points, max_length=500))
         if summary:
             print(f"\n【결정요지】")
-            summary_clean = re.sub(r'<[^>]+>', '', summary)
-            print(summary_clean[:500] + "..." if len(summary_clean) > 500 else summary_clean)
+            print(_clean_html_text(summary, max_length=500))
 
         if save:
-            safe_name = "".join(c for c in case_number if c.isalnum() or c in (' ', '_', '-')).strip()
+            safe_name = _sanitize_filename(case_number)
             filename = f"{safe_name}_{law_id}.xml"
             filepath = DATA_RAW_DIR / "detc" / filename
             filepath.parent.mkdir(parents=True, exist_ok=True)
@@ -706,17 +734,13 @@ def fetch_law_by_id(law_id: str, save: bool = True, force: bool = False, target:
         summary = root.findtext('.//판결요지', '')
         if points:
             print(f"\n【판시사항】")
-            points_clean = re.sub(r'<br\s*/?>', '\n', points)
-            points_clean = re.sub(r'<[^>]+>', '', points_clean)
-            print(points_clean[:500] + "..." if len(points_clean) > 500 else points_clean)
+            print(_clean_html_text(points, preserve_breaks=True, max_length=500))
         if summary:
             print(f"\n【판결요지】")
-            summary_clean = re.sub(r'<br\s*/?>', '\n', summary)
-            summary_clean = re.sub(r'<[^>]+>', '', summary_clean)
-            print(summary_clean[:500] + "..." if len(summary_clean) > 500 else summary_clean)
+            print(_clean_html_text(summary, preserve_breaks=True, max_length=500))
 
         if save:
-            safe_name = "".join(c for c in case_number if c.isalnum() or c in (' ', '_', '-')).strip()
+            safe_name = _sanitize_filename(case_number)
             filename = f"{safe_name}_{law_id}.xml"
             filepath = DATA_RAW_DIR / "prec" / filename
             filepath.parent.mkdir(parents=True, exist_ok=True)
@@ -734,7 +758,7 @@ def fetch_law_by_id(law_id: str, save: bool = True, force: bool = False, target:
         print(f"공포일: {promul_date} | 시행일: {enforce_date}")
 
         if save:
-            safe_name = "".join(c for c in item_name if c.isalnum() or c in (' ', '_', '-')).strip()
+            safe_name = _sanitize_filename(item_name)
             filename = f"{safe_name}_{law_id}.xml"
             filepath = DATA_RAW_DIR / filename
             DATA_RAW_DIR.mkdir(parents=True, exist_ok=True)
@@ -1130,21 +1154,16 @@ def fetch_case_by_id(case_id: str, save: bool = True):
     points = root.findtext('.//판시사항', '')
     if points:
         print(f"\n【판시사항】")
-        points_clean = re.sub(r'<br\s*/?>', '\n', points)
-        points_clean = re.sub(r'<[^>]+>', '', points_clean)
-        print(points_clean.strip())
+        print(_clean_html_text(points, preserve_breaks=True))
 
     # 판결요지
     summary = root.findtext('.//판결요지', '')
     if summary:
         print(f"\n【판결요지】")
-        summary_clean = re.sub(r'<br\s*/?>', '\n', summary)
-        summary_clean = re.sub(r'<[^>]+>', '', summary_clean)
-        print(summary_clean.strip())
+        print(_clean_html_text(summary, preserve_breaks=True))
 
     if save:
-        # 파일명에서 특수문자 제거
-        safe_name = "".join(c for c in case_number if c.isalnum() or c in (' ', '_', '-')).strip()
+        safe_name = _sanitize_filename(case_number)
         filename = f"{safe_name}_{case_id}.xml"
         filepath = DATA_RAW_DIR / "prec" / filename
 
