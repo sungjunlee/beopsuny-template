@@ -68,7 +68,7 @@ def _get_status_emoji(proc_result: str) -> str:
     return "📋"
 
 
-def is_exact_law_match(law_name: str, bill_name: str) -> bool:
+def _is_exact_law_match(law_name: str, bill_name: str) -> bool:
     """
     법령명이 의안명에 정확히 매칭되는지 확인
 
@@ -607,7 +607,7 @@ def track_law_bills(law_name: str, age: int = CURRENT_AGE, output_format: str = 
 
             # 정확히 해당 법령 개정안인지 확인
             # "상법"은 "국가배상법", "기상법"과 구분해야 함
-            if not is_exact_law_match(law_name, bill_name):
+            if not _is_exact_law_match(law_name, bill_name):
                 continue
 
             # 중복 제거
