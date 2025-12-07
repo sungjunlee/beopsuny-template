@@ -4,7 +4,7 @@
 
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Scenarios](https://img.shields.io/badge/Test_Scenarios-96-orange.svg)](tests/scenarios/)
+[![Scenarios](https://img.shields.io/badge/Test_Scenarios-111-orange.svg)](tests/scenarios/)
 
 Claude Code, OpenAI Codex, Gemini CLI, Cursor 등에서 **국가법령정보센터 API**를 활용해 정확한 법령 정보를 제공합니다.
 
@@ -54,6 +54,7 @@ python scripts/fetch_law.py search "최저임금" --type admrul
 | **판례 검색** | 대법원/하급심 판결 | ~330,000 |
 | **국회 의안** | 발의 법안, 개정안 추적 | 실시간 |
 | **정책 동향** | 부처 보도자료, 법령해석례 | 실시간 |
+| **계약서 검토** | 조항-법령 매핑, 영한 법률용어 | 30조항/100용어 |
 
 ---
 
@@ -207,7 +208,7 @@ export BEOPSUNY_GATEWAY_API_KEY='your-api-key'  # 선택
 
 ## 🧪 테스트
 
-96개 시나리오로 법순이의 정확성을 검증합니다.
+111개 시나리오로 법순이의 정확성을 검증합니다.
 
 ```bash
 python tests/run_scenarios.py              # 시나리오 목록
@@ -223,8 +224,38 @@ python tests/run_scenarios.py --run basic-01  # 특정 시나리오
 | 함정 케이스 | 24 | 폐지법령, 법령명 혼동 |
 | 업종별 | 12 | 부동산, 세금, 형사 등 |
 | 경계 케이스 | 12 | 외국법, 범위 외 질문 |
+| 계약서 검토 | 15 | 조항 매핑, 횡단 이슈 |
 
 자세한 내용: [tests/README.md](tests/README.md)
+
+---
+
+## 📝 계약서 검토 보조
+
+> **NEW** 영문/국문 계약서의 한국법 관점 검토 지원
+
+```
+"Indemnification 조항이 한국법에서 유효한가요?"
+→ 약관규제법 제7조 (고의/중과실 면책 불가) + law.go.kr 링크
+```
+
+| 기능 | 내용 |
+|------|------|
+| **조항-법령 매핑** | 30개 주요 조항 → 한국 법령 레퍼런스 |
+| **영한 법률용어** | 100개 용어 번역 + 뉘앙스 차이 설명 |
+| **횡단 이슈 체크** | 국제거래 세금, 하도급법 등 계약 전체 적용 법령 |
+| **효력 이슈 경고** | 저작인격권 포기, 무제한 면책 등 무효 조항 |
+
+<details>
+<summary>지원 조항 예시</summary>
+
+- Governing Law, Indemnification, Limitation of Liability
+- IP Assignment, Data Processing, Non-Compete
+- Force Majeure, Confidentiality, Termination 등
+
+</details>
+
+> ⚠️ 초벌 검토 보조용입니다. 최종 검토는 변호사와 상담하세요.
 
 ---
 
