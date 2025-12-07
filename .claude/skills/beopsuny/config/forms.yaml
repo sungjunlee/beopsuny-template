@@ -1,0 +1,120 @@
+# 기업법무 자주 사용 양식 링크
+# 법순이 범위 외이지만 편의상 안내
+#
+# 사용법: 사용자가 양식 요청 시 해당 URL 안내
+
+# 공정거래위원회
+ftc:
+  name: 공정거래위원회
+  forms:
+    - name: 신고서 양식
+      url: https://www.ftc.go.kr/www/cop/bbs/selectBoardList.do?key=201&bbsId=BBSMSTR_000000002320
+      description: 불공정거래행위, 하도급, 가맹사업 등 신고
+    - name: 자진신고 감면 신청서
+      url: https://www.ftc.go.kr/www/contents.do?key=300
+      description: 담합 리니언시 신청
+    - name: 기업결합 신고서
+      url: https://www.ftc.go.kr/www/contents.do?key=290
+      description: M&A 사전 신고
+
+# 고용노동부
+moel:
+  name: 고용노동부
+  forms:
+    - name: 근로계약서 표준양식
+      url: https://www.moel.go.kr/info/etc/dataroom/view.do?bbs_seq=20180300839
+      description: 정규직, 기간제, 단시간 근로계약서
+    - name: 취업규칙 표준
+      url: https://www.moel.go.kr/info/etc/dataroom/list.do
+      description: 취업규칙 작성 가이드
+    - name: 직장 내 괴롭힘 신고서
+      url: https://www.moel.go.kr/policy/policydata/view.do?bbs_seq=20190800944
+      description: 괴롭힘 신고 및 조사 양식
+
+# 개인정보보호위원회
+pipc:
+  name: 개인정보보호위원회
+  forms:
+    - name: 개인정보 처리방침 예시
+      url: https://www.pipc.go.kr/np/cop/bbs/selectBoardList.do?bbsId=BS074&mCode=C020010000
+      description: 표준 처리방침 작성 예시
+    - name: 개인정보 영향평가 서식
+      url: https://www.pipc.go.kr/np/cop/bbs/selectBoardList.do?bbsId=BS074&mCode=C020010000
+      description: 공공기관 영향평가 서식
+    - name: 개인정보 국외이전 동의서
+      url: https://www.pipc.go.kr/np/cop/bbs/selectBoardList.do?bbsId=BS074&mCode=C020010000
+      description: 국외이전 시 필요 동의서
+
+# 금융위원회/금융감독원
+fsc:
+  name: 금융위원회
+  forms:
+    - name: 민원 신청서
+      url: https://www.fsc.go.kr/po040101
+      description: 금융 관련 민원 신청
+
+# 법제처
+moleg:
+  name: 법제처
+  forms:
+    - name: 법령해석 요청서
+      url: https://www.moleg.go.kr/lawinfo/makingInfo.mo?mid=a10104010000
+      description: 법령해석 요청 방법
+
+# 법원
+court:
+  name: 법원
+  forms:
+    - name: 소장/답변서 양식
+      url: https://help.scourt.go.kr/nm/min_1/min_1_1/index.html
+      description: 민사 소송 기본 양식
+    - name: 지급명령 신청서
+      url: https://help.scourt.go.kr/nm/min_5/min_5_6/index.html
+      description: 독촉절차 양식
+    - name: 가압류/가처분 신청서
+      url: https://help.scourt.go.kr/nm/min_5/min_5_5/index.html
+      description: 보전처분 양식
+
+# 등기소
+registry:
+  name: 대법원 인터넷등기소
+  forms:
+    - name: 법인등기 신청서
+      url: https://www.iros.go.kr/pos1/jsp/help1/jsp/001001001001.jsp
+      description: 설립, 변경, 이전 등기
+    - name: 의사록 양식
+      url: https://www.iros.go.kr/pos1/jsp/help1/jsp/001001001001.jsp
+      description: 주주총회, 이사회 의사록
+
+# 특허청
+kipo:
+  name: 특허청
+  forms:
+    - name: 특허/상표 출원서
+      url: https://www.kipo.go.kr/kpo/HtmlApp?c=4000&catmenu=m02_01_02
+      description: 특허, 상표, 디자인 출원 양식
+    - name: 온라인 출원 (특허로)
+      url: https://www.patent.go.kr
+      description: 전자 출원 시스템
+
+# 내용증명
+contentproof:
+  name: 내용증명
+  forms:
+    - name: 내용증명 작성 안내
+      url: https://www.epost.go.kr/main.retrieveMainPage.comm
+      description: 우체국 내용증명 서비스
+    - name: 내용증명 양식 예시
+      url: https://help.scourt.go.kr/nm/min_1/min_1_7/index.html
+      description: 법원 내용증명 안내
+
+# 공증
+notary:
+  name: 공증
+  forms:
+    - name: 공증인가 법무법인 찾기
+      url: https://www.lawnb.com/Info/ContentMain/Notary
+      description: 지역별 공증 사무소 검색
+    - name: 전자공증 시스템
+      url: https://www.e-notary.go.kr
+      description: 온라인 공증 신청
