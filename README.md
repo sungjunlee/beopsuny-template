@@ -166,19 +166,43 @@ git clone https://github.com/your-username/your-repo.git
 
 ```bash
 git clone https://github.com/your-username/your-repo.git
-# AGENTS.md가 자동으로 로드됨
+# GEMINI.md (→ AGENTS.md symlink)가 자동으로 로드됨
 ```
 
 ### Cursor
 
-프로젝트를 열면 AGENTS.md가 자동으로 인식됩니다.
+프로젝트를 열면 AGENTS.md가 자동으로 인식됩니다. (v1.6+)
+
+### ⚠️ Windows 사용자 안내
+
+이 프로젝트는 `CLAUDE.md`, `GEMINI.md`가 `AGENTS.md`로의 symlink입니다.
+Windows에서 Git clone 시 symlink가 제대로 동작하려면:
+
+```powershell
+# 1. 관리자 권한으로 Developer Mode 활성화
+#    Settings > Update & Security > For developers > Developer Mode: On
+
+# 2. Git symlink 설정 활성화
+git config --global core.symlinks true
+
+# 3. 관리자 권한 터미널에서 clone
+git clone https://github.com/your-username/your-repo.git
+```
+
+또는 symlink 없이 사용:
+```powershell
+# symlink 대신 파일 복사
+copy AGENTS.md CLAUDE.md
+copy AGENTS.md GEMINI.md
+```
 
 ## 📁 프로젝트 구조
 
 ```
 .
-├── AGENTS.md                    # AI 에이전트 지침 (Codex, Gemini, Cursor)
+├── AGENTS.md                    # AI 에이전트 지침 (단일 소스)
 ├── CLAUDE.md -> AGENTS.md       # Claude Code용 (symlink)
+├── GEMINI.md -> AGENTS.md       # Gemini CLI용 (symlink)
 ├── .claude/skills/beopsuny/
 │   ├── SKILL.md                 # 상세 사용법
 │   ├── scripts/
