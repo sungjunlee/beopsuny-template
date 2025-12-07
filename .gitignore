@@ -40,3 +40,7 @@ Thumbs.db
 
 # Built skill zip (contains personal OC code)
 beopsuny-skill.zip
+
+# Test results (regenerated on each run)
+tests/results/*.json
+tests/results/*.md

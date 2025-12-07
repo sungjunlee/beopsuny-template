@@ -220,6 +220,10 @@ copy AGENTS.md GEMINI.md
 │       ├── raw/                 # 다운로드된 XML
 │       ├── parsed/              # 파싱된 Markdown
 │       └── bills/               # 의안 검색 결과
+├── tests/
+│   ├── scenarios/              # 사용 시나리오 (48개)
+│   ├── results/                # 테스트 결과
+│   └── run_scenarios.py        # 테스트 실행기
 ├── build_skill.py               # Claude Desktop 빌드 스크립트
 └── README.md
 ```
@@ -258,6 +262,23 @@ copy AGENTS.md GEMINI.md
 | 헌법재판소 | https://ccourt.go.kr | 헌재 결정문 |
 | 케이스노트 | https://casenote.kr | AI 판례 검색 |
 | 빅케이스 | https://bigcase.ai | 유사 판례 추천 |
+
+## 🧪 시나리오 테스트
+
+법순이 스킬의 실제 사용성을 검증하는 48개 시나리오가 포함되어 있습니다.
+
+```bash
+# 시나리오 목록 확인
+python tests/run_scenarios.py
+
+# 파일럿 테스트 (핵심 3개)
+python tests/run_scenarios.py --pilot
+
+# 특정 시나리오 실행
+python tests/run_scenarios.py --run basic-01
+```
+
+자세한 내용은 [tests/README.md](tests/README.md)를 참고하세요.
 
 ## 📦 Claude Desktop 설치
 
