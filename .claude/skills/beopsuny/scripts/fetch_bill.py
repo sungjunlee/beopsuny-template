@@ -585,6 +585,17 @@ def track_law_bills(law_name: str, age: int = CURRENT_AGE, output_format: str = 
         output_format: 출력 형식 (text: 텍스트, json: JSON)
     """
     is_json = output_format == 'json'
+
+    # 빈 법령명 검증
+    if not law_name or not law_name.strip():
+        if is_json:
+            print(json.dumps({'error': 'law_name is required', 'law_name': law_name, 'results': []}, ensure_ascii=False, indent=2))
+        else:
+            print("Error: 법령명을 입력해주세요.", file=sys.stderr)
+        return []
+
+    law_name = law_name.strip()
+
     if not is_json:
         print(f"\n=== '{law_name}' 관련 의안 추적 ({age}대 국회) ===\n")
 
