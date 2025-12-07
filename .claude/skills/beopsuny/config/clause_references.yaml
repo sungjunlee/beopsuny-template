@@ -373,13 +373,10 @@ clauses:
       primary:
         - law: 민법
           articles: ["제393조", "제398조"]
-          description: 손해배상 범위, 손해배상 예정
+          description: 손해배상 범위 (통상/특별손해), 손해배상 예정
         - law: 약관의 규제에 관한 법률
           articles: ["제7조", "제8조"]
           description: 면책조항 무효, 손해배상액 제한
-        - law: 상법
-          articles: ["제61조"]
-          description: 상인의 영업손해
       considerations:
         - 고의/중과실 면책 불가
         - 소비자계약 시 약관규제법 강행적용
@@ -454,7 +451,7 @@ clauses:
           description: 매도인의 하자담보책임
         - law: 상법
           articles: ["제69조"]
-          description: 매도인의 담보책임
+          description: 매수인의 검사·통지 의무 (하자 통지 지체 시 권리 상실)
         - law: 제조물책임법
           articles: ["제3조", "제4조"]
           description: 제조물책임
@@ -462,6 +459,7 @@ clauses:
       - 보증 기간과 범위
       - 보증 위반 시 구제수단
       - 제조물책임법 적용 여부
+      - 상사매매 시 검사·통지 의무 준수 여부 (상법 제69조)
     risk_level: medium
 
   disclaimer:
@@ -767,10 +765,19 @@ clauses:
         - law: 부정경쟁방지 및 영업비밀보호에 관한 법률
           articles: ["제2조 제2호", "제10조", "제18조"]
           description: 영업비밀 정의, 침해금지, 벌칙
+      supplementary:
+        - law: 형법
+          articles: ["제314조"]
+          description: 업무방해죄 (위계/위력에 의한 영업비밀 침해 시 적용 가능)
+        - law: 산업기술의 유출방지 및 보호에 관한 법률
+          articles: ["제14조", "제36조", "제37조"]
+          description: 국가핵심기술 유출금지, 형사처벌 (최대 15년/15억원)
+          note: 기술집약 산업, 반도체, 배터리 등 국가핵심기술 관련 계약 시 확인 필요
       considerations:
         - 퇴직 후 비밀유지 의무 범위
         - 영업비밀 vs 일반 비밀정보
         - 비밀관리성 입증
+        - 국가핵심기술 해당 시 산업기술보호법 적용 (가중처벌)
     review_points:
       - 비밀정보 범위의 명확성
       - 퇴직 후 유지 기간
@@ -890,6 +897,7 @@ clauses:
         - 하도급법 적용 시 60일 이내 지급
         - 지연이자율 상한 (이자제한법)
         - 선급금, 기성금 지급 조건
+        - 현행 법정이율 5% (민법 제379조). 2025.2.7 법정이율 변동제 도입 입법예고 (경제상황 반영 주기적 조정)
     review_points:
       - 지급 기일의 합리성
       - 지연이자율
