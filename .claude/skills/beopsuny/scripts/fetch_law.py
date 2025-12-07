@@ -66,8 +66,13 @@ _law_index_cache = None
 
 
 def _sanitize_filename(name: str) -> str:
-    """파일명에서 특수문자 제거"""
-    return "".join(c for c in name if c.isalnum() or c in (' ', '_', '-')).strip()
+    """파일명에서 특수문자 제거
+
+    Returns:
+        안전한 파일명 (빈 문자열인 경우 'unnamed' 반환)
+    """
+    cleaned = "".join(c for c in name if c.isalnum() or c in (' ', '_', '-')).strip()
+    return cleaned or 'unnamed'
 
 
 def _clean_html_text(text: str, preserve_breaks: bool = False, max_length: int = None) -> str:
