@@ -50,20 +50,22 @@ cp .claude/skills/beopsuny/config/settings.yaml.example \
 
 ### 4. 해외 접근 설정 (Claude Code Web, Codex Web 등)
 
-한국 정부 API는 해외 IP를 차단합니다. 해외 환경에서 사용 시 프록시 설정이 필요합니다.
+한국 정부 API는 해외 IP를 차단합니다. 해외 환경에서 사용 시 게이트웨이 설정이 필요합니다.
 
 ```bash
-# Cloudflare Workers (무료, 권장)
-export BEOPSUNY_PROXY_TYPE=cloudflare
-export BEOPSUNY_PROXY_URL='https://your-worker.workers.dev'
+# cors-anywhere 기반 게이트웨이 설정
+export BEOPSUNY_GATEWAY_URL='https://your-cors-proxy.workers.dev'
 
-# 또는 Bright Data (유료)
-export BEOPSUNY_PROXY_TYPE=brightdata
-export BEOPSUNY_BRIGHTDATA_USERNAME='your-username'
-export BEOPSUNY_BRIGHTDATA_PASSWORD='your-password'
+# API 키 인증이 필요한 경우 (선택)
+export BEOPSUNY_GATEWAY_API_KEY='your-api-key'
 ```
 
-자세한 설정: [docs/PROXY_SETUP.md](docs/PROXY_SETUP.md)
+**Cloudflare Workers로 무료 게이트웨이 구축:**
+1. [Zibri/cloudflare-cors-anywhere](https://github.com/Zibri/cloudflare-cors-anywhere) 저장소 fork
+2. Cloudflare 계정에서 Workers 배포
+3. 배포된 URL을 `BEOPSUNY_GATEWAY_URL`에 설정
+
+> 💡 게이트웨이는 URL을 Base64URL로 인코딩하여 Cloudflare WAF를 우회합니다.
 
 ## 📖 사용법
 
@@ -183,12 +185,10 @@ git clone https://github.com/your-username/your-repo.git
 │   │   ├── fetch_law.py         # 법령/판례 검색
 │   │   ├── fetch_bill.py        # 국회 의안 조회
 │   │   ├── fetch_policy.py      # 정책 동향 수집
-│   │   ├── proxy_utils.py       # 프록시 유틸리티 (해외 접근)
+│   │   ├── gateway.py           # 게이트웨이 유틸리티 (해외 접근)
 │   │   ├── parse_law.py         # 법령 파싱
+│   │   ├── compare_law.py       # 법령 개정 비교
 │   │   └── gen_link.py          # 링크 생성
-│   ├── cloudflare-worker/       # Cloudflare Worker 프록시
-│   │   ├── worker.js            # Worker 코드
-│   │   └── wrangler.toml        # 배포 설정
 │   ├── config/
 │   │   ├── settings.yaml.example  # API 키 설정 템플릿
 │   │   └── law_index.yaml         # 법령 ID 인덱스
@@ -196,8 +196,6 @@ git clone https://github.com/your-username/your-repo.git
 │       ├── raw/                 # 다운로드된 XML
 │       ├── parsed/              # 파싱된 Markdown
 │       └── bills/               # 의안 검색 결과
-├── docs/
-│   └── PROXY_SETUP.md           # 해외 접근 프록시 설정 가이드
 ├── build_skill.py               # Claude Desktop 빌드 스크립트
 └── README.md
 ```

@@ -53,6 +53,7 @@ fetch_law.py exact "상법"                    # 정확한 법령명
 fetch_law.py exact "상법" --with-admrul      # + 관련 행정규칙
 fetch_law.py search "개인정보" --type law    # 키워드 검색
 fetch_law.py search "과징금" --type admrul   # 행정규칙 검색
+fetch_law.py search "민법" --format json     # JSON 출력 (파이프라인용)
 ```
 
 ### 판례 검색
@@ -104,6 +105,19 @@ fetch_policy.py summary --days 7          # 종합 요약
 gen_link.py law "민법" --article 750
 gen_link.py case "2022다12345"
 ```
+
+### 법령 개정 비교
+```bash
+# 두 버전의 법령 XML 파일 비교
+compare_law.py data/raw/민법_이전.xml data/raw/민법_현행.xml --name 민법
+
+# 출력: 추가/삭제/수정된 조문 목록 + diff
+```
+
+**비교 워크플로우:**
+1. `fetch_law.py fetch --name "민법"` → 현행 법령 다운로드
+2. 연혁법령에서 이전 버전 다운로드 (law.go.kr 웹사이트)
+3. `compare_law.py old.xml new.xml` → 변경 사항 비교
 
 ---
 
