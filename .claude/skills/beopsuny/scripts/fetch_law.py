@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -182,7 +183,7 @@ def api_request(endpoint: str, params: dict) -> ET.Element:
         sys.exit(1)
 
 
-def search_laws(query: str, target: str = "law", display: int = 20, page: int = 1, sort: str = None):
+def search_laws(query: str, target: str = "law", display: int = 20, page: int = 1, sort: str = None, output_format: str = "text"):
     """
     법령 검색
 
@@ -192,6 +193,7 @@ def search_laws(query: str, target: str = "law", display: int = 20, page: int = 
         display: 결과 개수 (최대 100)
         page: 페이지 번호
         sort: 정렬 기준 (date: 날짜순, name: 이름순)
+        output_format: 출력 형식 (text: 텍스트, json: JSON)
     """
     oc = load_config()
 
@@ -217,7 +219,11 @@ def search_laws(query: str, target: str = "law", display: int = 20, page: int = 
         'admrul': '행정규칙', 'expc': '법령해석례', 'detc': '헌재결정례'
     }
     target_name = target_names.get(target, target)
-    print(f"\n=== {target_name} 검색 결과: '{query}' (총 {total}건) ===\n")
+
+    # JSON 출력 모드에서는 텍스트 출력 생략
+    is_json = output_format == 'json'
+    if not is_json:
+        print(f"\n=== {target_name} 검색 결과: '{query}' (총 {total}건) ===\n")
 
     results = []
 
@@ -240,12 +246,13 @@ def search_laws(query: str, target: str = "law", display: int = 20, page: int = 
                 'type': case_type,
             })
 
-            print(f"⚖️  {case_name}")
-            print(f"   사건번호: {case_number}")
-            print(f"   법원: {court_name} | 선고일: {judge_date}")
-            print(f"   사건종류: {case_type}")
-            print(f"   링크: https://www.law.go.kr/판례/({case_number.replace(' ', '')})")
-            print()
+            if not is_json:
+                print(f"⚖️  {case_name}")
+                print(f"   사건번호: {case_number}")
+                print(f"   법원: {court_name} | 선고일: {judge_date}")
+                print(f"   사건종류: {case_type}")
+                print(f"   링크: https://www.law.go.kr/판례/({case_number.replace(' ', '')})")
+                print()
 
     # 행정규칙 검색
     elif target == 'admrul':
@@ -266,12 +273,13 @@ def search_laws(query: str, target: str = "law", display: int = 20, page: int = 
                 'ministry': ministry,
             })
 
-            print(f"📋 [{admrul_type}] {admrul_name}")
-            print(f"   ID: {admrul_id}")
-            print(f"   소관: {ministry}")
-            print(f"   발령일: {promul_date} | 시행일: {enforce_date}")
-            print(f"   링크: https://www.law.go.kr/행정규칙/{urllib.parse.quote(admrul_name)}")
-            print()
+            if not is_json:
+                print(f"📋 [{admrul_type}] {admrul_name}")
+                print(f"   ID: {admrul_id}")
+                print(f"   소관: {ministry}")
+                print(f"   발령일: {promul_date} | 시행일: {enforce_date}")
+                print(f"   링크: https://www.law.go.kr/행정규칙/{urllib.parse.quote(admrul_name)}")
+                print()
 
     # 자치법규 검색
     elif target == 'ordin':
@@ -292,12 +300,13 @@ def search_laws(query: str, target: str = "law", display: int = 20, page: int = 
                 'enforce_date': enforce_date,
             })
 
-            print(f"🏛️  [{ordin_type}] {ordin_name}")
-            print(f"   ID: {ordin_id}")
-            print(f"   지자체: {local_gov}")
-            print(f"   공포일: {promul_date} | 시행일: {enforce_date}")
-            print(f"   링크: https://www.law.go.kr/자치법규/{urllib.parse.quote(ordin_name)}")
-            print()
+            if not is_json:
+                print(f"🏛️  [{ordin_type}] {ordin_name}")
+                print(f"   ID: {ordin_id}")
+                print(f"   지자체: {local_gov}")
+                print(f"   공포일: {promul_date} | 시행일: {enforce_date}")
+                print(f"   링크: https://www.law.go.kr/자치법규/{urllib.parse.quote(ordin_name)}")
+                print()
 
     # 법령해석례 검색
     elif target == 'expc':
@@ -318,11 +327,12 @@ def search_laws(query: str, target: str = "law", display: int = 20, page: int = 
                 'response_date': response_date,
             })
 
-            print(f"📝 {case_name}")
-            print(f"   안건번호: {case_number}")
-            print(f"   질의기관: {request_org} → 회신기관: {response_org}")
-            print(f"   회신일: {response_date}")
-            print()
+            if not is_json:
+                print(f"📝 {case_name}")
+                print(f"   안건번호: {case_number}")
+                print(f"   질의기관: {request_org} → 회신기관: {response_org}")
+                print(f"   회신일: {response_date}")
+                print()
 
     # 헌재결정례 검색
     elif target == 'detc':
@@ -343,13 +353,14 @@ def search_laws(query: str, target: str = "law", display: int = 20, page: int = 
                 'case_type': case_type,
             })
 
-            print(f"⚖️  {case_name}")
-            print(f"   사건번호: {case_number}")
-            print(f"   종국일: {decision_date}")
-            if decision_type:
-                print(f"   결정유형: {decision_type}")
-            print(f"   링크: https://www.law.go.kr/헌재결정례/({case_number.replace(' ', '')})")
-            print()
+            if not is_json:
+                print(f"⚖️  {case_name}")
+                print(f"   사건번호: {case_number}")
+                print(f"   종국일: {decision_date}")
+                if decision_type:
+                    print(f"   결정유형: {decision_type}")
+                print(f"   링크: https://www.law.go.kr/헌재결정례/({case_number.replace(' ', '')})")
+                print()
 
     # 법령 검색 (기본)
     else:
@@ -370,12 +381,25 @@ def search_laws(query: str, target: str = "law", display: int = 20, page: int = 
                 'type': law_type,
             })
 
-            print(f"📜 {law_name}")
-            print(f"   ID: {law_id}")
-            print(f"   구분: {law_type} | 소관: {ministry}")
-            print(f"   공포일: {promul_date} | 시행일: {enforce_date}")
-            print(f"   링크: https://www.law.go.kr/법령/{urllib.parse.quote(law_name)}")
-            print()
+            if not is_json:
+                print(f"📜 {law_name}")
+                print(f"   ID: {law_id}")
+                print(f"   구분: {law_type} | 소관: {ministry}")
+                print(f"   공포일: {promul_date} | 시행일: {enforce_date}")
+                print(f"   링크: https://www.law.go.kr/법령/{urllib.parse.quote(law_name)}")
+                print()
+
+    # JSON 출력
+    if is_json:
+        output = {
+            'query': query,
+            'target': target,
+            'total': int(total),
+            'page': page,
+            'display': display,
+            'results': results,
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
 
     return results
 
@@ -1116,6 +1140,8 @@ def main():
     search_parser.add_argument('--display', type=int, default=20, help='결과 개수')
     search_parser.add_argument('--page', type=int, default=1, help='페이지 번호')
     search_parser.add_argument('--sort', choices=['date', 'name'], help='정렬 기준 (date: 날짜순, name: 이름순)')
+    search_parser.add_argument('--format', '-f', default='text', choices=['text', 'json'],
+                               help='출력 형식 (text: 텍스트, json: JSON)')
 
     # cases 명령 (판례 전용)
     cases_parser = subparsers.add_parser('cases', help='판례 검색')
@@ -1155,7 +1181,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == 'search':
-        search_laws(args.query, args.type, args.display, args.page, args.sort)
+        search_laws(args.query, args.type, args.display, args.page, args.sort, args.format)
     elif args.command == 'exact':
         search_exact_law(args.name, with_admrul=args.with_admrul)
     elif args.command == 'cases':
