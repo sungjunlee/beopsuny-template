@@ -263,7 +263,7 @@ def api_request(service_code: str, params: dict, response_type: str = "json") ->
 
 
 def search_bills(query: str, age: int = CURRENT_AGE, proc_result: str = None,
-                 display: int = 20, page: int = 1):
+                 display: int = 20, page: int = 1, output_format: str = "text"):
     """
     국회의원 발의법률안 검색
 
@@ -273,7 +273,9 @@ def search_bills(query: str, age: int = CURRENT_AGE, proc_result: str = None,
         proc_result: 처리상태 필터
         display: 결과 개수
         page: 페이지 번호
+        output_format: 출력 형식 (text: 텍스트, json: JSON)
     """
+    is_json = output_format == 'json'
     params = {
         "AGE": age,
         "BILL_NAME": query,
@@ -289,8 +291,11 @@ def search_bills(query: str, age: int = CURRENT_AGE, proc_result: str = None,
     # 결과 파싱
     service_key = SERVICE_CODES["bills"]
     if service_key not in data:
-        print(f"\n=== 의안 검색 결과: '{query}' (0건) ===\n")
-        print("검색 결과가 없습니다.")
+        if is_json:
+            print(json.dumps({'query': query, 'age': age, 'total': 0, 'results': []}, ensure_ascii=False, indent=2))
+        else:
+            print(f"\n=== 의안 검색 결과: '{query}' (0건) ===\n")
+            print("검색 결과가 없습니다.")
         return []
 
     result_data = data[service_key]
@@ -303,11 +308,15 @@ def search_bills(query: str, age: int = CURRENT_AGE, proc_result: str = None,
             total = h["list_total_count"]
             break
 
-    print(f"\n=== 의안 검색 결과: '{query}' ({age}대 국회, 총 {total}건) ===\n")
+    if not is_json:
+        print(f"\n=== 의안 검색 결과: '{query}' ({age}대 국회, 총 {total}건) ===\n")
 
     # 실제 데이터는 두 번째 요소에 있음
     if len(result_data) < 2 or "row" not in result_data[1]:
-        print("검색 결과가 없습니다.")
+        if is_json:
+            print(json.dumps({'query': query, 'age': age, 'total': 0, 'results': []}, ensure_ascii=False, indent=2))
+        else:
+            print("검색 결과가 없습니다.")
         return []
 
     rows = result_data[1]["row"]
@@ -332,31 +341,43 @@ def search_bills(query: str, age: int = CURRENT_AGE, proc_result: str = None,
             "committee": committee,
         })
 
-        # 상태 이모지
-        status_emoji = "📋"
-        if proc_result_text == "원안가결" or proc_result_text == "수정가결":
-            status_emoji = "✅"
-        elif not proc_result_text or proc_result_text == "계류":
-            status_emoji = "⏳"
-        elif proc_result_text and ("폐기" in proc_result_text or "철회" in proc_result_text):
-            status_emoji = "❌"
+        if not is_json:
+            # 상태 이모지
+            status_emoji = "📋"
+            if proc_result_text == "원안가결" or proc_result_text == "수정가결":
+                status_emoji = "✅"
+            elif not proc_result_text or proc_result_text == "계류":
+                status_emoji = "⏳"
+            elif proc_result_text and ("폐기" in proc_result_text or "철회" in proc_result_text):
+                status_emoji = "❌"
 
-        print(f"{status_emoji} [{bill_no}] {bill_name}")
-        print(f"   대표발의: {proposer}")
-        print(f"   발의일: {propose_dt} | 상태: {proc_result_text or '계류'}")
-        if committee:
-            print(f"   소관위: {committee}")
-        # BILL_ID가 있으면 사용, 없으면 PRC_의안번호 형식
-        link_id = bill_id if bill_id else f"PRC_{bill_no}"
-        print(f"   링크: https://likms.assembly.go.kr/bill/billDetail.do?billId={link_id}")
-        print()
+            print(f"{status_emoji} [{bill_no}] {bill_name}")
+            print(f"   대표발의: {proposer}")
+            print(f"   발의일: {propose_dt} | 상태: {proc_result_text or '계류'}")
+            if committee:
+                print(f"   소관위: {committee}")
+            # BILL_ID가 있으면 사용, 없으면 PRC_의안번호 형식
+            link_id = bill_id if bill_id else f"PRC_{bill_no}"
+            print(f"   링크: https://likms.assembly.go.kr/bill/billDetail.do?billId={link_id}")
+            print()
 
-    print(f"표시: {len(results)}건 / 전체: {total}건")
+    if is_json:
+        output = {
+            'query': query,
+            'age': age,
+            'total': total,
+            'page': page,
+            'display': display,
+            'results': results,
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+    else:
+        print(f"표시: {len(results)}건 / 전체: {total}건")
     return results
 
 
 def get_recent_bills(days: int = 30, keyword: str = None, age: int = CURRENT_AGE,
-                     display: int = 50):
+                     display: int = 50, output_format: str = "text"):
     """
     최근 발의된 법률안 조회
 
@@ -365,7 +386,9 @@ def get_recent_bills(days: int = 30, keyword: str = None, age: int = CURRENT_AGE
         keyword: 법률안명 필터 키워드
         age: 국회 대수
         display: 결과 개수
+        output_format: 출력 형식 (text: 텍스트, json: JSON)
     """
+    is_json = output_format == 'json'
     params = {
         "AGE": age,
         "pSize": display,
@@ -375,7 +398,10 @@ def get_recent_bills(days: int = 30, keyword: str = None, age: int = CURRENT_AGE
 
     service_key = SERVICE_CODES["bills"]
     if service_key not in data:
-        print(f"\n=== 최근 발의 법률안 (0건) ===\n")
+        if is_json:
+            print(json.dumps({'days': days, 'keyword': keyword, 'age': age, 'total': 0, 'results': []}, ensure_ascii=False, indent=2))
+        else:
+            print(f"\n=== 최근 발의 법률안 (0건) ===\n")
         return []
 
     result_data = data[service_key]
@@ -384,13 +410,17 @@ def get_recent_bills(days: int = 30, keyword: str = None, age: int = CURRENT_AGE
     cutoff_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
 
     if len(result_data) < 2 or "row" not in result_data[1]:
-        print("검색 결과가 없습니다.")
+        if is_json:
+            print(json.dumps({'days': days, 'keyword': keyword, 'age': age, 'total': 0, 'results': []}, ensure_ascii=False, indent=2))
+        else:
+            print("검색 결과가 없습니다.")
         return []
 
     rows = result_data[1]["row"]
     results = []
 
-    print(f"\n=== 최근 {days}일 발의 법률안 ({age}대 국회) ===\n")
+    if not is_json:
+        print(f"\n=== 최근 {days}일 발의 법률안 ({age}대 국회) ===\n")
 
     for item in rows:
         propose_dt = item.get("PROPOSE_DT", "")
@@ -416,15 +446,27 @@ def get_recent_bills(days: int = 30, keyword: str = None, age: int = CURRENT_AGE
             "proc_result": proc_result_text,
         })
 
-        print(f"📝 [{bill_no}] {bill_name}")
-        print(f"   대표발의: {proposer} | 발의일: {propose_dt}")
-        print()
+        if not is_json:
+            print(f"📝 [{bill_no}] {bill_name}")
+            print(f"   대표발의: {proposer} | 발의일: {propose_dt}")
+            print()
 
-    print(f"총 {len(results)}건")
+    if is_json:
+        output = {
+            'days': days,
+            'keyword': keyword,
+            'age': age,
+            'total': len(results),
+            'results': results,
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+    else:
+        print(f"총 {len(results)}건")
     return results
 
 
-def get_pending_bills(keyword: str = None, age: int = CURRENT_AGE, display: int = 50):
+def get_pending_bills(keyword: str = None, age: int = CURRENT_AGE, display: int = 50,
+                      output_format: str = "text"):
     """
     계류 중인 의안 조회
 
@@ -432,7 +474,9 @@ def get_pending_bills(keyword: str = None, age: int = CURRENT_AGE, display: int 
         keyword: 의안명 필터 키워드
         age: 국회 대수
         display: 결과 개수
+        output_format: 출력 형식 (text: 텍스트, json: JSON)
     """
+    is_json = output_format == 'json'
     params = {
         "AGE": age,
         "pSize": display,
@@ -445,7 +489,10 @@ def get_pending_bills(keyword: str = None, age: int = CURRENT_AGE, display: int 
 
     service_key = SERVICE_CODES["pending"]
     if service_key not in data:
-        print(f"\n=== 계류 의안 (0건) ===\n")
+        if is_json:
+            print(json.dumps({'keyword': keyword, 'age': age, 'total': 0, 'results': []}, ensure_ascii=False, indent=2))
+        else:
+            print(f"\n=== 계류 의안 (0건) ===\n")
         return []
 
     result_data = data[service_key]
@@ -458,11 +505,15 @@ def get_pending_bills(keyword: str = None, age: int = CURRENT_AGE, display: int 
             total = h["list_total_count"]
             break
 
-    keyword_str = f" - '{keyword}'" if keyword else ""
-    print(f"\n=== 계류 의안{keyword_str} ({age}대 국회, 총 {total}건) ===\n")
+    if not is_json:
+        keyword_str = f" - '{keyword}'" if keyword else ""
+        print(f"\n=== 계류 의안{keyword_str} ({age}대 국회, 총 {total}건) ===\n")
 
     if len(result_data) < 2 or "row" not in result_data[1]:
-        print("검색 결과가 없습니다.")
+        if is_json:
+            print(json.dumps({'keyword': keyword, 'age': age, 'total': 0, 'results': []}, ensure_ascii=False, indent=2))
+        else:
+            print("검색 결과가 없습니다.")
         return []
 
     rows = result_data[1]["row"]
@@ -483,26 +534,40 @@ def get_pending_bills(keyword: str = None, age: int = CURRENT_AGE, display: int 
             "committee": committee,
         })
 
-        print(f"⏳ [{bill_no}] {bill_name}")
-        print(f"   제안자: {proposer}")
-        print(f"   발의일: {propose_dt}")
-        if committee:
-            print(f"   소관위: {committee}")
-        print()
+        if not is_json:
+            print(f"⏳ [{bill_no}] {bill_name}")
+            print(f"   제안자: {proposer}")
+            print(f"   발의일: {propose_dt}")
+            if committee:
+                print(f"   소관위: {committee}")
+            print()
 
-    print(f"표시: {len(results)}건 / 전체: {total}건")
+    if is_json:
+        output = {
+            'keyword': keyword,
+            'age': age,
+            'total': total,
+            'display': display,
+            'results': results,
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+    else:
+        print(f"표시: {len(results)}건 / 전체: {total}건")
     return results
 
 
-def track_law_bills(law_name: str, age: int = CURRENT_AGE):
+def track_law_bills(law_name: str, age: int = CURRENT_AGE, output_format: str = "text"):
     """
     특정 법령 관련 개정안 추적
 
     Args:
         law_name: 추적할 법령명 (예: "상법", "민법")
         age: 국회 대수
+        output_format: 출력 형식 (text: 텍스트, json: JSON)
     """
-    print(f"\n=== '{law_name}' 관련 의안 추적 ({age}대 국회) ===\n")
+    is_json = output_format == 'json'
+    if not is_json:
+        print(f"\n=== '{law_name}' 관련 의안 추적 ({age}대 국회) ===\n")
 
     # 1. 해당 법령 개정안 검색
     search_terms = [
@@ -567,7 +632,10 @@ def track_law_bills(law_name: str, age: int = CURRENT_AGE):
     all_results.sort(key=lambda x: x["propose_date"], reverse=True)
 
     if not all_results:
-        print(f"'{law_name}' 관련 발의된 의안이 없습니다.")
+        if is_json:
+            print(json.dumps({'law_name': law_name, 'age': age, 'total': 0, 'pending': [], 'passed': [], 'others': []}, ensure_ascii=False, indent=2))
+        else:
+            print(f"'{law_name}' 관련 발의된 의안이 없습니다.")
         return []
 
     # 상태별 분류
@@ -575,48 +643,64 @@ def track_law_bills(law_name: str, age: int = CURRENT_AGE):
     passed = [r for r in all_results if r["proc_result"] in ["원안가결", "수정가결"]]
     others = [r for r in all_results if r not in pending and r not in passed]
 
-    print(f"📊 총 {len(all_results)}건 발견\n")
-    print(f"   ⏳ 계류: {len(pending)}건")
-    print(f"   ✅ 가결: {len(passed)}건")
-    print(f"   📋 기타: {len(others)}건")
-    print()
-
-    # 계류 중인 의안 출력
-    if pending:
-        print("─" * 50)
-        print("⏳ 계류 중인 의안:")
-        print("─" * 50)
-        for r in pending:
-            print(f"\n📋 [{r['bill_no']}] {r['name']}")
-            print(f"   대표발의: {r['proposer']}")
-            print(f"   발의일: {r['propose_date']}")
-            if r['committee']:
-                print(f"   소관위: {r['committee']}")
-            link_id = r.get('bill_id') or f"PRC_{r['bill_no']}"
-            print(f"   링크: https://likms.assembly.go.kr/bill/billDetail.do?billId={link_id}")
-
-    # 가결된 의안 출력
-    if passed:
+    if is_json:
+        output = {
+            'law_name': law_name,
+            'age': age,
+            'total': len(all_results),
+            'pending_count': len(pending),
+            'passed_count': len(passed),
+            'others_count': len(others),
+            'pending': pending,
+            'passed': passed,
+            'others': others,
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+    else:
+        print(f"📊 총 {len(all_results)}건 발견\n")
+        print(f"   ⏳ 계류: {len(pending)}건")
+        print(f"   ✅ 가결: {len(passed)}건")
+        print(f"   📋 기타: {len(others)}건")
         print()
-        print("─" * 50)
-        print("✅ 가결된 의안:")
-        print("─" * 50)
-        for r in passed:
-            print(f"\n✅ [{r['bill_no']}] {r['name']}")
-            print(f"   대표발의: {r['proposer']}")
-            print(f"   발의일: {r['propose_date']} | 결과: {r['proc_result']}")
+
+        # 계류 중인 의안 출력
+        if pending:
+            print("─" * 50)
+            print("⏳ 계류 중인 의안:")
+            print("─" * 50)
+            for r in pending:
+                print(f"\n📋 [{r['bill_no']}] {r['name']}")
+                print(f"   대표발의: {r['proposer']}")
+                print(f"   발의일: {r['propose_date']}")
+                if r['committee']:
+                    print(f"   소관위: {r['committee']}")
+                link_id = r.get('bill_id') or f"PRC_{r['bill_no']}"
+                print(f"   링크: https://likms.assembly.go.kr/bill/billDetail.do?billId={link_id}")
+
+        # 가결된 의안 출력
+        if passed:
+            print()
+            print("─" * 50)
+            print("✅ 가결된 의안:")
+            print("─" * 50)
+            for r in passed:
+                print(f"\n✅ [{r['bill_no']}] {r['name']}")
+                print(f"   대표발의: {r['proposer']}")
+                print(f"   발의일: {r['propose_date']} | 결과: {r['proc_result']}")
 
     return all_results
 
 
-def get_bill_votes(bill_no: str, age: int = CURRENT_AGE):
+def get_bill_votes(bill_no: str, age: int = CURRENT_AGE, output_format: str = "text"):
     """
     의안별 표결현황 조회
 
     Args:
         bill_no: 의안번호
         age: 국회 대수
+        output_format: 출력 형식 (text: 텍스트, json: JSON)
     """
+    is_json = output_format == 'json'
     params = {
         "AGE": age,
         "BILL_NO": bill_no,
@@ -627,19 +711,26 @@ def get_bill_votes(bill_no: str, age: int = CURRENT_AGE):
 
     service_key = SERVICE_CODES["votes"]
     if service_key not in data:
-        print(f"\n=== 의안 표결현황: {bill_no} ===\n")
-        print("표결 정보가 없습니다.")
+        if is_json:
+            print(json.dumps({'bill_no': bill_no, 'age': age, 'vote_info': None}, ensure_ascii=False, indent=2))
+        else:
+            print(f"\n=== 의안 표결현황: {bill_no} ===\n")
+            print("표결 정보가 없습니다.")
         return None
 
     result_data = data[service_key]
 
     if len(result_data) < 2 or "row" not in result_data[1]:
-        print("표결 정보가 없습니다.")
+        if is_json:
+            print(json.dumps({'bill_no': bill_no, 'age': age, 'vote_info': None}, ensure_ascii=False, indent=2))
+        else:
+            print("표결 정보가 없습니다.")
         return None
 
     rows = result_data[1]["row"]
 
-    print(f"\n=== 의안 표결현황: {bill_no} ===\n")
+    if not is_json:
+        print(f"\n=== 의안 표결현황: {bill_no} ===\n")
 
     for item in rows:
         bill_name = item.get("BILL_NAME", "")
@@ -649,13 +740,7 @@ def get_bill_votes(bill_no: str, age: int = CURRENT_AGE):
         abstain_count = item.get("BLANK_TCNT", 0)
         result = item.get("RESULT", "")
 
-        print(f"📜 {bill_name}")
-        print(f"   표결일: {vote_date}")
-        print(f"   찬성: {yes_count} | 반대: {no_count} | 기권: {abstain_count}")
-        print(f"   결과: {result}")
-        print()
-
-        return {
+        vote_info = {
             "bill_no": bill_no,
             "name": bill_name,
             "vote_date": vote_date,
@@ -664,6 +749,17 @@ def get_bill_votes(bill_no: str, age: int = CURRENT_AGE):
             "abstain": abstain_count,
             "result": result,
         }
+
+        if is_json:
+            print(json.dumps({'bill_no': bill_no, 'age': age, 'vote_info': vote_info}, ensure_ascii=False, indent=2))
+        else:
+            print(f"📜 {bill_name}")
+            print(f"   표결일: {vote_date}")
+            print(f"   찬성: {yes_count} | 반대: {no_count} | 기권: {abstain_count}")
+            print(f"   결과: {result}")
+            print()
+
+        return vote_info
 
     return None
 
@@ -681,6 +777,8 @@ def main():
     search_parser.add_argument('--display', type=int, default=20, help='결과 개수')
     search_parser.add_argument('--page', type=int, default=1, help='페이지 번호')
     search_parser.add_argument('--save', action='store_true', help='결과를 Markdown으로 저장')
+    search_parser.add_argument('--format', '-f', default='text', choices=['text', 'json'],
+                               help='출력 형식 (text: 텍스트, json: JSON)')
 
     # recent 명령
     recent_parser = subparsers.add_parser('recent', help='최근 발의 법률안')
@@ -689,6 +787,8 @@ def main():
     recent_parser.add_argument('--age', type=int, default=CURRENT_AGE, help='국회 대수')
     recent_parser.add_argument('--display', type=int, default=50, help='결과 개수')
     recent_parser.add_argument('--save', action='store_true', help='결과를 Markdown으로 저장')
+    recent_parser.add_argument('--format', '-f', default='text', choices=['text', 'json'],
+                               help='출력 형식 (text: 텍스트, json: JSON)')
 
     # pending 명령
     pending_parser = subparsers.add_parser('pending', help='계류 의안 조회')
@@ -696,22 +796,28 @@ def main():
     pending_parser.add_argument('--age', type=int, default=CURRENT_AGE, help='국회 대수')
     pending_parser.add_argument('--display', type=int, default=50, help='결과 개수')
     pending_parser.add_argument('--save', action='store_true', help='결과를 Markdown으로 저장')
+    pending_parser.add_argument('--format', '-f', default='text', choices=['text', 'json'],
+                               help='출력 형식 (text: 텍스트, json: JSON)')
 
     # track 명령
     track_parser = subparsers.add_parser('track', help='특정 법령 개정안 추적')
     track_parser.add_argument('law_name', help='추적할 법령명 (예: 상법, 민법)')
     track_parser.add_argument('--age', type=int, default=CURRENT_AGE, help='국회 대수')
     track_parser.add_argument('--save', action='store_true', help='결과를 Markdown으로 저장')
+    track_parser.add_argument('--format', '-f', default='text', choices=['text', 'json'],
+                              help='출력 형식 (text: 텍스트, json: JSON)')
 
     # votes 명령
     votes_parser = subparsers.add_parser('votes', help='의안 표결현황')
     votes_parser.add_argument('--bill-no', required=True, help='의안번호')
     votes_parser.add_argument('--age', type=int, default=CURRENT_AGE, help='국회 대수')
+    votes_parser.add_argument('--format', '-f', default='text', choices=['text', 'json'],
+                              help='출력 형식 (text: 텍스트, json: JSON)')
 
     args = parser.parse_args()
 
     if args.command == 'search':
-        results = search_bills(args.query, args.age, args.status, args.display, args.page)
+        results = search_bills(args.query, args.age, args.status, args.display, args.page, args.format)
         if args.save and results:
             save_to_markdown(results, 'search', {
                 'title': f"의안 검색: {args.query}",
@@ -719,7 +825,7 @@ def main():
                 'age': args.age,
             })
     elif args.command == 'recent':
-        results = get_recent_bills(args.days, args.keyword, args.age, args.display)
+        results = get_recent_bills(args.days, args.keyword, args.age, args.display, args.format)
         if args.save and results:
             keyword_str = f" - {args.keyword}" if args.keyword else ""
             save_to_markdown(results, 'recent', {
@@ -729,7 +835,7 @@ def main():
                 'days': args.days,
             })
     elif args.command == 'pending':
-        results = get_pending_bills(args.keyword, args.age, args.display)
+        results = get_pending_bills(args.keyword, args.age, args.display, args.format)
         if args.save and results:
             keyword_str = f" - {args.keyword}" if args.keyword else ""
             save_to_markdown(results, 'pending', {
@@ -738,7 +844,7 @@ def main():
                 'age': args.age,
             })
     elif args.command == 'track':
-        results = track_law_bills(args.law_name, args.age)
+        results = track_law_bills(args.law_name, args.age, args.format)
         if args.save and results:
             save_to_markdown(results, 'track', {
                 'title': f"{args.law_name} 관련 의안 추적",
@@ -746,7 +852,7 @@ def main():
                 'age': args.age,
             })
     elif args.command == 'votes':
-        get_bill_votes(args.bill_no, args.age)
+        get_bill_votes(args.bill_no, args.age, args.format)
     else:
         parser.print_help()
 

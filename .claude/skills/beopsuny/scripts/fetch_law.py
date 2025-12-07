@@ -404,7 +404,7 @@ def search_laws(query: str, target: str = "law", display: int = 20, page: int = 
     return results
 
 
-def search_cases(query: str, court: str = None, from_date: str = None, display: int = 20, page: int = 1):
+def search_cases(query: str, court: str = None, from_date: str = None, display: int = 20, page: int = 1, output_format: str = "text"):
     """
     판례 전용 검색
 
@@ -414,6 +414,7 @@ def search_cases(query: str, court: str = None, from_date: str = None, display: 
         from_date: 검색 시작일 (YYYYMMDD)
         display: 결과 개수
         page: 페이지 번호
+        output_format: 출력 형식 (text: 텍스트, json: JSON)
     """
     oc = load_config()
 
@@ -433,7 +434,9 @@ def search_cases(query: str, court: str = None, from_date: str = None, display: 
     root = api_request('lawSearch.do', params)
 
     total = root.findtext('.//totalCnt', '0')
-    print(f"\n=== 판례 검색 결과: '{query}' (총 {total}건) ===\n")
+    is_json = output_format == 'json'
+    if not is_json:
+        print(f"\n=== 판례 검색 결과: '{query}' (총 {total}건) ===\n")
 
     results = []
     for item in root.findall('.//prec'):
@@ -463,15 +466,29 @@ def search_cases(query: str, court: str = None, from_date: str = None, display: 
             'judgment_type': judgment_type,
         })
 
-        # 판례 인용 형식으로 출력
-        formatted_date = format_court_date(judge_date) if judge_date else ''
-        print(f"⚖️  {court_name} {formatted_date} 선고 {case_number} 판결")
-        print(f"   사건명: {case_name}")
-        print(f"   사건종류: {case_type}")
-        print(f"   링크: https://www.law.go.kr/판례/({case_number.replace(' ', '')})")
-        print()
+        if not is_json:
+            # 판례 인용 형식으로 출력
+            formatted_date = format_court_date(judge_date) if judge_date else ''
+            print(f"⚖️  {court_name} {formatted_date} 선고 {case_number} 판결")
+            print(f"   사건명: {case_name}")
+            print(f"   사건종류: {case_type}")
+            print(f"   링크: https://www.law.go.kr/판례/({case_number.replace(' ', '')})")
+            print()
 
-    print(f"총 {len(results)}건")
+    if is_json:
+        output = {
+            'query': query,
+            'total': int(total),
+            'page': page,
+            'display': display,
+            'court_filter': court,
+            'from_date': from_date,
+            'results': results,
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+    else:
+        print(f"총 {len(results)}건")
+
     return results
 
 
@@ -797,7 +814,7 @@ def fetch_law_by_name(name: str, with_decree: bool = False, force: bool = False)
     return root
 
 
-def get_recent_laws(days: int = 30, from_date: str = None, to_date: str = None, target: str = "law", date_type: str = "ef"):
+def get_recent_laws(days: int = 30, from_date: str = None, to_date: str = None, target: str = "law", date_type: str = "ef", output_format: str = "text"):
     """
     최근 개정 법령 조회
 
@@ -807,7 +824,9 @@ def get_recent_laws(days: int = 30, from_date: str = None, to_date: str = None, 
         to_date: 종료일 (YYYYMMDD)
         target: 검색 대상
         date_type: 날짜 기준 (ef: 시행일, anc: 공포일)
+        output_format: 출력 형식 (text: 텍스트, json: JSON)
     """
+    is_json = output_format == 'json'
     oc = load_config()
 
     # 날짜 범위 계산
@@ -839,7 +858,8 @@ def get_recent_laws(days: int = 30, from_date: str = None, to_date: str = None, 
 
     total = root.findtext('.//totalCnt', '0')
     date_type_name = "공포일" if date_type == "anc" else "시행일"
-    print(f"\n=== 최근 법령 목록 ({date_type_name} 기준: {date_range}) - 총 {total}건 ===\n")
+    if not is_json:
+        print(f"\n=== 최근 법령 목록 ({date_type_name} 기준: {date_range}) - 총 {total}건 ===\n")
 
     results = []
     for item in root.findall('.//law'):
@@ -859,30 +879,44 @@ def get_recent_laws(days: int = 30, from_date: str = None, to_date: str = None, 
             'revision_type': revision_type,
         })
 
-        revision_emoji = "🆕" if revision_type == "제정" else "📝"
-        print(f"{revision_emoji} [{revision_type}] {law_name}")
-        print(f"   공포일: {promul_date} | 시행일: {enforce_date}")
-        print(f"   소관: {ministry}")
-        print()
+        if not is_json:
+            revision_emoji = "🆕" if revision_type == "제정" else "📝"
+            print(f"{revision_emoji} [{revision_type}] {law_name}")
+            print(f"   공포일: {promul_date} | 시행일: {enforce_date}")
+            print(f"   소관: {ministry}")
+            print()
 
-    print(f"표시: {len(results)}건 / 전체: {total}건")
+    if is_json:
+        output = {
+            'date_range': date_range,
+            'date_type': date_type_name,
+            'total': int(total),
+            'results': results,
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+    else:
+        print(f"표시: {len(results)}건 / 전체: {total}건")
+
     return results
 
 
-def search_exact_law(name: str, with_admrul: bool = False):
+def search_exact_law(name: str, with_admrul: bool = False, output_format: str = "text"):
     """
     정확한 법령명으로 검색 (클라이언트측 필터링)
 
     Args:
         name: 정확한 법령명 (예: "상법", "민법")
         with_admrul: 관련 행정규칙도 함께 검색 여부
+        output_format: 출력 형식 (text: 텍스트, json: JSON)
 
     Note:
         API는 부분 일치 검색만 지원하므로, 결과에서 정확히 일치하는 것만 필터링
     """
+    is_json = output_format == 'json'
+
     # 주요 법령인 경우 설정 파일에서 ID 직접 활용
     major_law_id = get_major_law_id(name)
-    if major_law_id:
+    if major_law_id and not is_json:
         print(f"\n💡 '{name}'은 주요 법령입니다. 직접 조회합니다...")
         print(f"   → python scripts/fetch_law.py fetch --id {major_law_id}\n")
 
@@ -899,7 +933,8 @@ def search_exact_law(name: str, with_admrul: bool = False):
 
     root = api_request('lawSearch.do', params)
 
-    print(f"\n=== 법령 정확 검색: '{name}' ===\n")
+    if not is_json:
+        print(f"\n=== 법령 정확 검색: '{name}' ===\n")
 
     results = []
     exact_matches = []
@@ -933,51 +968,67 @@ def search_exact_law(name: str, with_admrul: bool = False):
 
     # 정확히 일치하는 법령 출력
     if exact_matches:
-        print("📌 정확히 일치하는 법령:\n")
-        for r in exact_matches:
-            print(f"📜 {r['name']}")
-            print(f"   ID: {r['id']}")
-            print(f"   구분: {r['type']} | 소관: {r['ministry']}")
-            print(f"   공포일: {r['promul_date']} | 시행일: {r['enforce_date']}")
-            print(f"   링크: https://www.law.go.kr/법령/{urllib.parse.quote(r['name'])}")
-            print()
+        if not is_json:
+            print("📌 정확히 일치하는 법령:\n")
+            for r in exact_matches:
+                print(f"📜 {r['name']}")
+                print(f"   ID: {r['id']}")
+                print(f"   구분: {r['type']} | 소관: {r['ministry']}")
+                print(f"   공포일: {r['promul_date']} | 시행일: {r['enforce_date']}")
+                print(f"   링크: https://www.law.go.kr/법령/{urllib.parse.quote(r['name'])}")
+                print()
         results.extend(exact_matches)
-    else:
+    elif not is_json:
         print(f"⚠️  '{name}'과 정확히 일치하는 법령이 없습니다.\n")
 
     # 관련 법령 (시행령, 시행규칙) 출력
     if related_matches:
-        print("📎 관련 법령 (시행령/시행규칙):\n")
-        for r in related_matches:
-            print(f"📜 {r['name']}")
-            print(f"   ID: {r['id']}")
-            print(f"   구분: {r['type']} | 소관: {r['ministry']}")
-            print(f"   공포일: {r['promul_date']} | 시행일: {r['enforce_date']}")
-            print()
+        if not is_json:
+            print("📎 관련 법령 (시행령/시행규칙):\n")
+            for r in related_matches:
+                print(f"📜 {r['name']}")
+                print(f"   ID: {r['id']}")
+                print(f"   구분: {r['type']} | 소관: {r['ministry']}")
+                print(f"   공포일: {r['promul_date']} | 시행일: {r['enforce_date']}")
+                print()
         results.extend(related_matches)
 
-    if not results:
+    if not results and not is_json:
         print(f"💡 힌트: '{name}'을 포함하는 법령을 검색하려면:")
         print(f"   python scripts/fetch_law.py search \"{name}\"")
 
     # 관련 행정규칙 검색
+    admin_rules = []
     if with_admrul:
-        print(f"\n{'='*60}")
-        print(f"📋 관련 행정규칙 (고시/훈령/예규) 검색 중...")
-        print(f"{'='*60}")
-        search_related_admin_rules(name)
+        if not is_json:
+            print(f"\n{'='*60}")
+            print(f"📋 관련 행정규칙 (고시/훈령/예규) 검색 중...")
+            print(f"{'='*60}")
+        admin_rules = search_related_admin_rules(name, output_format=output_format)
+
+    # JSON 출력
+    if is_json:
+        output = {
+            'query': name,
+            'exact_matches': exact_matches,
+            'related_laws': related_matches,
+            'admin_rules': admin_rules if with_admrul else [],
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
 
     return results
 
 
-def search_related_admin_rules(law_name: str, display: int = 10):
+def search_related_admin_rules(law_name: str, display: int = 10, output_format: str = "text"):
     """
     법령명과 관련된 행정규칙 검색
 
     Args:
         law_name: 법령명 (예: "개인정보보호법", "근로기준법")
         display: 표시할 결과 수
+        output_format: 출력 형식 (text: 텍스트, json: JSON)
     """
+    is_json = output_format == 'json'
     oc = load_config()
 
     # 다양한 검색 패턴 시도
@@ -1026,21 +1077,22 @@ def search_related_admin_rules(law_name: str, display: int = 10):
             # API 오류 시 다음 검색어로 계속
             continue
 
-    if all_results:
-        print(f"\n=== '{law_name}' 관련 행정규칙 (총 {len(all_results)}건) ===\n")
-        print("⚠️  실무 팁: 법률은 큰 틀만 정합니다. 구체적인 기준/절차/서식은")
-        print("   아래 행정규칙(고시/훈령/예규)에서 확인하세요!\n")
+    if not is_json:
+        if all_results:
+            print(f"\n=== '{law_name}' 관련 행정규칙 (총 {len(all_results)}건) ===\n")
+            print("⚠️  실무 팁: 법률은 큰 틀만 정합니다. 구체적인 기준/절차/서식은")
+            print("   아래 행정규칙(고시/훈령/예규)에서 확인하세요!\n")
 
-        for r in all_results[:display]:
-            print(f"📋 [{r['type']}] {r['name']}")
-            print(f"   ID: {r['id']}")
-            print(f"   소관: {r['ministry']}")
-            print(f"   발령일: {r['promul_date']} | 시행일: {r['enforce_date']}")
-            print(f"   링크: https://www.law.go.kr/행정규칙/{urllib.parse.quote(r['name'])}")
-            print()
-    else:
-        print(f"\n'{law_name}' 관련 행정규칙을 찾지 못했습니다.")
-        print(f"💡 직접 검색: python scripts/fetch_law.py search \"{law_name}\" --type admrul")
+            for r in all_results[:display]:
+                print(f"📋 [{r['type']}] {r['name']}")
+                print(f"   ID: {r['id']}")
+                print(f"   소관: {r['ministry']}")
+                print(f"   발령일: {r['promul_date']} | 시행일: {r['enforce_date']}")
+                print(f"   링크: https://www.law.go.kr/행정규칙/{urllib.parse.quote(r['name'])}")
+                print()
+        else:
+            print(f"\n'{law_name}' 관련 행정규칙을 찾지 못했습니다.")
+            print(f"💡 직접 검색: python scripts/fetch_law.py search \"{law_name}\" --type admrul")
 
     return all_results
 
@@ -1150,12 +1202,16 @@ def main():
     cases_parser.add_argument('--from', dest='from_date', help='검색 시작일 (YYYYMMDD)')
     cases_parser.add_argument('--display', type=int, default=20, help='결과 개수')
     cases_parser.add_argument('--page', type=int, default=1, help='페이지 번호')
+    cases_parser.add_argument('--format', '-f', default='text', choices=['text', 'json'],
+                              help='출력 형식 (text: 텍스트, json: JSON)')
 
     # exact 명령 (정확한 법령명 검색)
     exact_parser = subparsers.add_parser('exact', help='정확한 법령명 검색 (예: 상법, 민법)')
     exact_parser.add_argument('name', help='정확한 법령명')
     exact_parser.add_argument('--with-admrul', action='store_true',
                               help='관련 행정규칙(고시/훈령/예규)도 함께 검색')
+    exact_parser.add_argument('--format', '-f', default='text', choices=['text', 'json'],
+                              help='출력 형식 (text: 텍스트, json: JSON)')
 
     # fetch 명령
     fetch_parser = subparsers.add_parser('fetch', help='법령/판례/행정규칙 다운로드')
@@ -1177,15 +1233,17 @@ def main():
     recent_parser.add_argument('--to', dest='to_date', help='종료일 (YYYYMMDD)')
     recent_parser.add_argument('--date-type', choices=['ef', 'anc'], default='ef',
                                help='날짜 기준 (ef: 시행일, anc: 공포일)')
+    recent_parser.add_argument('--format', '-f', default='text', choices=['text', 'json'],
+                               help='출력 형식 (text: 텍스트, json: JSON)')
 
     args = parser.parse_args()
 
     if args.command == 'search':
         search_laws(args.query, args.type, args.display, args.page, args.sort, args.format)
     elif args.command == 'exact':
-        search_exact_law(args.name, with_admrul=args.with_admrul)
+        search_exact_law(args.name, with_admrul=args.with_admrul, output_format=args.format)
     elif args.command == 'cases':
-        search_cases(args.query, args.court, args.from_date, args.display, args.page)
+        search_cases(args.query, args.court, args.from_date, args.display, args.page, args.format)
     elif args.command == 'fetch':
         if args.case:
             fetch_case_by_number(args.case)
@@ -1197,7 +1255,7 @@ def main():
             print("Error: --id, --name, 또는 --case 중 하나를 지정하세요.", file=sys.stderr)
             sys.exit(1)
     elif args.command == 'recent':
-        get_recent_laws(args.days, args.from_date, args.to_date, date_type=args.date_type)
+        get_recent_laws(args.days, args.from_date, args.to_date, date_type=args.date_type, output_format=args.format)
     else:
         parser.print_help()
 
