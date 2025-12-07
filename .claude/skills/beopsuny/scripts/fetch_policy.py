@@ -263,14 +263,31 @@ def fetch_rss(
 
 def cmd_rss(args):
     """RSS 보도자료 수집 명령"""
+    is_json = getattr(args, 'format', 'text') == 'json'
     try:
         results = fetch_rss(args.dept, args.keyword, args.limit)
     except ImportError as e:
-        print(f"Error: {e}", file=sys.stderr)
+        if is_json:
+            print(json.dumps({'error': str(e), 'results': []}, ensure_ascii=False, indent=2))
+        else:
+            print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
     except ValueError as e:
-        print(f"Error: {e}", file=sys.stderr)
+        if is_json:
+            print(json.dumps({'error': str(e), 'results': []}, ensure_ascii=False, indent=2))
+        else:
+            print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
+
+    if is_json:
+        output = {
+            'dept': args.dept,
+            'keyword': args.keyword,
+            'total': len(results),
+            'results': results,
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+        return
 
     if not results:
         print("검색 결과가 없습니다.")
@@ -403,7 +420,18 @@ def search_legal_interpret(
 
 def cmd_interpret(args):
     """법령해석례 검색 명령"""
+    is_json = getattr(args, 'format', 'text') == 'json'
     data = search_legal_interpret(args.query, args.display)
+
+    if is_json:
+        output = {
+            'query': args.query,
+            'total': data.get('total', 0),
+            'error': data.get('error'),
+            'results': data.get('results', []),
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+        return
 
     if data.get("error") == "auth_failed":
         print(f"\n⚠️  법령해석례 API 접근 권한이 없습니다.")
@@ -493,12 +521,24 @@ def search_legislative(
 
 def cmd_legislative(args):
     """입법예고 검색 명령"""
+    is_json = getattr(args, 'format', 'text') == 'json'
     data = search_legislative(
         status=args.status,
         law_name=args.law_name,
         days=args.days,
         display=args.display,
     )
+
+    if is_json:
+        output = {
+            'status': args.status,
+            'law_name': args.law_name,
+            'days': args.days,
+            'error': data.get('error'),
+            'results': data.get('results', []),
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+        return
 
     if data.get("error") == "auth_failed":
         print(f"\n⚠️  입법예고 API 접근 권한이 없습니다.")
@@ -670,11 +710,15 @@ Available dept codes: ftc, moel, fsc, pipc, moleg
     rss_parser.add_argument("dept", nargs="?", help="부처 코드 (ftc, moel, fsc, pipc, moleg)")
     rss_parser.add_argument("--keyword", "-k", help="키워드 필터")
     rss_parser.add_argument("--limit", "-l", type=int, default=20, help="최대 건수 (기본: 20)")
+    rss_parser.add_argument("--format", "-f", default="text", choices=["text", "json"],
+                            help="출력 형식 (text: 텍스트, json: JSON)")
 
     # interpret 명령
     interpret_parser = subparsers.add_parser("interpret", help="고용노동부 행정해석 검색")
     interpret_parser.add_argument("query", help="검색어")
     interpret_parser.add_argument("--display", "-d", type=int, default=20, help="표시 건수")
+    interpret_parser.add_argument("--format", "-f", default="text", choices=["text", "json"],
+                                  help="출력 형식 (text: 텍스트, json: JSON)")
 
     # legislative 명령
     leg_parser = subparsers.add_parser("legislative", help="입법예고 검색")
@@ -682,6 +726,8 @@ Available dept codes: ftc, moel, fsc, pipc, moleg
     leg_parser.add_argument("--law-name", "-n", help="법령명")
     leg_parser.add_argument("--days", "-d", type=int, default=30, help="검색 기간 (일)")
     leg_parser.add_argument("--display", type=int, default=20, help="표시 건수")
+    leg_parser.add_argument("--format", "-f", default="text", choices=["text", "json"],
+                            help="출력 형식 (text: 텍스트, json: JSON)")
 
     # summary 명령
     summary_parser = subparsers.add_parser("summary", help="정책 동향 종합 요약")
