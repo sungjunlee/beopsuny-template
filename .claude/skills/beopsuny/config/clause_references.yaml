@@ -830,11 +830,11 @@ clauses:
           articles: ["제543조", "제544조", "제545조"]
           description: 해제권, 이행지체와 해제, 정기행위와 해제
         - law: 민법
-          articles: ["제660조", "제661조"]
-          description: 임대차 해지
+          articles: ["제635조"]
+          description: 기간의 약정없는 임대차의 해지통고 (토지·건물 임대인 6월, 임차인 1월)
         - law: 상법
-          articles: ["제58조"]
-          description: 대리상 계약 해지
+          articles: ["제92조"]
+          description: 대리상 계약 해지 (기간 약정 없는 경우 2월 전 예고)
       considerations:
         - 해제 vs 해지 구분
         - 계속적 계약의 해지 제한
