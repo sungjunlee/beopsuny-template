@@ -423,13 +423,20 @@ clauses:
     korean_law:
       primary:
         - law: 상법
-          articles: ["제638조", "제665조", "제720조"]
-          description: 보험계약, 책임보험
+          articles: ["제638조", "제665조"]
+          description: 보험계약 총칙, 손해보험 통칙
+        - law: 상법
+          articles: ["제720조"]
+          description: 책임보험 - 피보험자 방어비용 부담 (재판상·재판외 필요비용)
+        - law: 상법
+          articles: ["제724조 제2항"]
+          description: 피해자 직접청구권 (피해자가 보험자에게 직접 보상 청구 가능)
           fetch_command: "fetch_law.py exact '상법'"
       considerations:
         - 책임보험 vs 배상책임보험
         - 피보험자 지위 (additional insured)
         - 구상권 포기 조항
+        - 피해자 직접청구권 (상법 제724조 제2항)
     review_points:
       - 요구 보험이 한국에서 가입 가능한지
       - 보험료 부담 주체
@@ -647,8 +654,12 @@ clauses:
       primary:
         - law: 소프트웨어 진흥법
           articles: ["제29조", "제30조"]
-          description: 소프트웨어 임치
+          description: 소프트웨어 임치 (구법 조문번호)
           fetch_command: "fetch_law.py exact '소프트웨어 진흥법'"
+          note: |
+            2020년 전면개정으로 조문번호 변경됨. 현행 임치 관련 조문은
+            law.go.kr에서 최신 조문번호 확인 필요. 제50조(과업심의위원회),
+            제51조(하도급제한) 등과 혼동 주의.
       escrow_agents:
         - name: 한국저작권위원회 SW 임치
           url: https://www.cros.or.kr
@@ -736,16 +747,18 @@ clauses:
       ko: ["유인금지", "인력 스카우트 금지", "고객 유인 금지"]
     korean_law:
       primary:
-        - law: 부정경쟁방지 및 영업비밀보호에 관한 법률
-          articles: ["제2조 제1호 차목", "제10조"]
-          description: 영업비밀을 이용한 부정경쟁
         - law: 민법
           articles: ["제750조"]
-          description: 불법행위 (집단적 이직)
+          description: 불법행위 (집단적·조직적 이직 유도, 허위사실 유포 시)
+        - law: 부정경쟁방지 및 영업비밀보호에 관한 법률
+          articles: ["제2조 제1호 카목"]
+          description: 타인의 상당한 투자·노력으로 만든 성과 무단 사용 (고객 DB 등)
+          note: 차목(아이디어 탈취)은 거래교섭 단계 아이디어 보호 규정으로 인력 유인과 무관
       considerations:
         - 단순 이직 권유는 적법
         - 집단적/조직적 이직 유도는 불법행위 가능
         - 고객 유인은 비교적 인정
+        - 영업비밀(고객 DB 등) 이용 시 부정경쟁방지법 적용 가능
     review_points:
       - 유인금지 범위가 합리적인지
       - 기간 제한 여부
