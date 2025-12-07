@@ -49,6 +49,25 @@ SERVICE_CODES = {
 CURRENT_AGE = 22
 
 
+def _extract_total_count(head: list) -> int:
+    """API 응답 헤더에서 총 건수 추출"""
+    for h in head:
+        if "list_total_count" in h:
+            return h["list_total_count"]
+    return 0
+
+
+def _get_status_emoji(proc_result: str) -> str:
+    """처리결과에 따른 상태 이모지 반환"""
+    if proc_result in ("원안가결", "수정가결"):
+        return "✅"
+    elif not proc_result or proc_result == "계류":
+        return "⏳"
+    elif proc_result and ("폐기" in proc_result or "철회" in proc_result):
+        return "❌"
+    return "📋"
+
+
 def is_exact_law_match(law_name: str, bill_name: str) -> bool:
     """
     법령명이 의안명에 정확히 매칭되는지 확인
@@ -302,11 +321,7 @@ def search_bills(query: str, age: int = CURRENT_AGE, proc_result: str = None,
 
     # 헤더 정보 확인
     head = result_data[0].get("head", [{}])
-    total = 0
-    for h in head:
-        if "list_total_count" in h:
-            total = h["list_total_count"]
-            break
+    total = _extract_total_count(head)
 
     if not is_json:
         print(f"\n=== 의안 검색 결과: '{query}' ({age}대 국회, 총 {total}건) ===\n")
@@ -342,15 +357,7 @@ def search_bills(query: str, age: int = CURRENT_AGE, proc_result: str = None,
         })
 
         if not is_json:
-            # 상태 이모지
-            status_emoji = "📋"
-            if proc_result_text == "원안가결" or proc_result_text == "수정가결":
-                status_emoji = "✅"
-            elif not proc_result_text or proc_result_text == "계류":
-                status_emoji = "⏳"
-            elif proc_result_text and ("폐기" in proc_result_text or "철회" in proc_result_text):
-                status_emoji = "❌"
-
+            status_emoji = _get_status_emoji(proc_result_text)
             print(f"{status_emoji} [{bill_no}] {bill_name}")
             print(f"   대표발의: {proposer}")
             print(f"   발의일: {propose_dt} | 상태: {proc_result_text or '계류'}")
@@ -499,11 +506,7 @@ def get_pending_bills(keyword: str = None, age: int = CURRENT_AGE, display: int 
 
     # 헤더에서 총 건수 추출
     head = result_data[0].get("head", [{}])
-    total = 0
-    for h in head:
-        if "list_total_count" in h:
-            total = h["list_total_count"]
-            break
+    total = _extract_total_count(head)
 
     if not is_json:
         keyword_str = f" - '{keyword}'" if keyword else ""
