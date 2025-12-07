@@ -48,6 +48,24 @@ SERVICE_CODES = {
 # 현재 국회 대수
 CURRENT_AGE = 22
 
+# 캐시
+_config_cache = None
+
+
+def _load_config_file():
+    """설정 파일 로드 (캐싱)"""
+    global _config_cache
+    if _config_cache is not None:
+        return _config_cache
+
+    if CONFIG_PATH.exists():
+        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+            _config_cache = yaml.safe_load(f) or {}
+    else:
+        _config_cache = {}
+
+    return _config_cache
+
 
 def _extract_total_count(head: list) -> int:
     """API 응답 헤더에서 총 건수 추출"""
@@ -206,13 +224,11 @@ def load_config():
     if api_key:
         return api_key
 
-    # 2. 설정 파일 fallback
-    if CONFIG_PATH.exists():
-        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-            config = yaml.safe_load(f) or {}
-        api_key = config.get('assembly_api_key', '')
-        if api_key:
-            return api_key
+    # 2. 설정 파일 fallback (캐싱 사용)
+    config = _load_config_file()
+    api_key = config.get('assembly_api_key', '')
+    if api_key:
+        return api_key
 
     # API 키 없음
     print(f"Error: Assembly API key not found.", file=sys.stderr)
