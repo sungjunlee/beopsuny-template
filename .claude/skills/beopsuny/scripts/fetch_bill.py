@@ -48,6 +48,24 @@ SERVICE_CODES = {
 # 현재 국회 대수
 CURRENT_AGE = 22
 
+# 캐시
+_config_cache = None
+
+
+def _load_config_file():
+    """설정 파일 로드 (캐싱)"""
+    global _config_cache
+    if _config_cache is not None:
+        return _config_cache
+
+    if CONFIG_PATH.exists():
+        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+            _config_cache = yaml.safe_load(f) or {}
+    else:
+        _config_cache = {}
+
+    return _config_cache
+
 
 def _extract_total_count(head: list) -> int:
     """API 응답 헤더에서 총 건수 추출"""
@@ -68,7 +86,7 @@ def _get_status_emoji(proc_result: str) -> str:
     return "📋"
 
 
-def is_exact_law_match(law_name: str, bill_name: str) -> bool:
+def _is_exact_law_match(law_name: str, bill_name: str) -> bool:
     """
     법령명이 의안명에 정확히 매칭되는지 확인
 
@@ -206,13 +224,11 @@ def load_config():
     if api_key:
         return api_key
 
-    # 2. 설정 파일 fallback
-    if CONFIG_PATH.exists():
-        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-            config = yaml.safe_load(f) or {}
-        api_key = config.get('assembly_api_key', '')
-        if api_key:
-            return api_key
+    # 2. 설정 파일 fallback (캐싱 사용)
+    config = _load_config_file()
+    api_key = config.get('assembly_api_key', '')
+    if api_key:
+        return api_key
 
     # API 키 없음
     print(f"Error: Assembly API key not found.", file=sys.stderr)
@@ -607,7 +623,7 @@ def track_law_bills(law_name: str, age: int = CURRENT_AGE, output_format: str = 
 
             # 정확히 해당 법령 개정안인지 확인
             # "상법"은 "국가배상법", "기상법"과 구분해야 함
-            if not is_exact_law_match(law_name, bill_name):
+            if not _is_exact_law_match(law_name, bill_name):
                 continue
 
             # 중복 제거
