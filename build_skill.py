@@ -146,10 +146,19 @@ def build_zip(oc_code: str, assembly_api_key: str, output_path: Path, gateway_co
         settings_content = create_settings_yaml(oc_code, assembly_api_key, gateway_config)
         zf.writestr("beopsuny/config/settings.yaml", settings_content)
 
-        # config/law_index.yaml (법령 인덱스)
-        law_index = skill_dir / "config" / "law_index.yaml"
-        if law_index.exists():
-            zf.write(law_index, "beopsuny/config/law_index.yaml")
+        # config/*.yaml (법령 인덱스, 조항 레퍼런스, 용어 사전)
+        config_dir = skill_dir / "config"
+        if config_dir.exists():
+            for yaml_file in sorted(config_dir.glob("*.yaml")):
+                # settings.yaml은 위에서 API 키 주입해서 생성하므로 제외
+                if yaml_file.name != "settings.yaml":
+                    zf.write(yaml_file, f"beopsuny/config/{yaml_file.name}")
+
+        # docs/*.md (가이드 문서)
+        docs_dir = skill_dir / "docs"
+        if docs_dir.exists():
+            for md_file in sorted(docs_dir.glob("*.md")):
+                zf.write(md_file, f"beopsuny/docs/{md_file.name}")
 
         # scripts/*.py
         scripts_dir = skill_dir / "scripts"
