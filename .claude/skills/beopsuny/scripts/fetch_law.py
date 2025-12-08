@@ -1295,6 +1295,11 @@ def show_checklist(name: str, output_file: str = None, output_format: str = "mar
     with open(filepath, 'r', encoding='utf-8') as f:
         data = yaml.safe_load(f)
 
+    # 빈 YAML 파일 체크
+    if not data:
+        print(f"Error: '{name}' 체크리스트가 비어있습니다.", file=sys.stderr)
+        sys.exit(1)
+
     if output_format == 'json':
         # JSON 출력
         output = json.dumps(data, ensure_ascii=False, indent=2)
@@ -1451,12 +1456,16 @@ def show_checklist(name: str, output_file: str = None, output_format: str = "mar
         if laws:
             lines.append("**관련 법령**:")
             for law in laws:
+                if not isinstance(law, dict):
+                    continue
                 law_name = law.get('name', '')
+                if not law_name:
+                    continue
                 articles = law.get('articles', [])
                 link = _generate_law_link(law_name)
 
                 if articles:
-                    articles_str = ", ".join(articles)
+                    articles_str = ", ".join(str(a) for a in articles if a)
                     lines.append(f"- [{law_name}]({link}): {articles_str}")
                 else:
                     lines.append(f"- [{law_name}]({link})")
@@ -1467,6 +1476,8 @@ def show_checklist(name: str, output_file: str = None, output_format: str = "mar
         if admin_rules:
             lines.append("**관련 행정규칙 (고시/훈령)**:")
             for rule in admin_rules:
+                if not isinstance(rule, str):
+                    continue
                 rule_link = f"https://www.law.go.kr/행정규칙/{urllib.parse.quote(rule)}"
                 lines.append(f"- [{rule}]({rule_link})")
             lines.append("")
@@ -1594,12 +1605,18 @@ def show_checklist(name: str, output_file: str = None, output_format: str = "mar
         lines.append("## 📋 적용 대상 판단")
         lines.append("")
         for item in scope_items:
-            lines.append(f"### {item.get('task', '')}")
+            if not isinstance(item, dict):
+                continue
+            task = item.get('task', '')
+            if not task:
+                continue
+            lines.append(f"### {task}")
             for cp in item.get('check_points', []):
-                lines.append(f"- [ ] {cp}")
+                if isinstance(cp, str):
+                    lines.append(f"- [ ] {cp}")
             notes = item.get('notes', '')
             if notes:
-                for note_line in notes.strip().split('\n'):
+                for note_line in str(notes).strip().split('\n'):
                     lines.append(f"> {note_line.strip()}")
             lines.append("")
         lines.append("---")
@@ -1622,7 +1639,7 @@ def show_checklist(name: str, output_file: str = None, output_format: str = "mar
             lines.append("**법인**")
             for key, val in corporation.items():
                 if isinstance(val, dict):
-                    lines.append(f"- {key}: {val.get('punishment', '')}")
+                    lines.append(f"- {val.get('description', key)}: {val.get('punishment', '')}")
             lines.append("")
         civil = penalties.get('civil', {})
         if civil:
@@ -1637,15 +1654,25 @@ def show_checklist(name: str, output_file: str = None, output_format: str = "mar
         lines.append("## 📝 계약 유형별 검토 포인트")
         lines.append("")
         for ct in contract_types:
-            lines.append(f"### {ct.get('type_name', '')}")
+            if not isinstance(ct, dict):
+                continue
+            type_name = ct.get('type_name', '')
+            if not type_name:
+                continue
+            lines.append(f"### {type_name}")
             lines.append("")
             for issue in ct.get('key_issues', []):
-                lines.append(f"**{issue.get('issue', '')}**")
+                if not isinstance(issue, dict):
+                    continue
+                issue_name = issue.get('issue', '')
+                if issue_name:
+                    lines.append(f"**{issue_name}**")
                 for cp in issue.get('check_points', []):
-                    lines.append(f"- [ ] {cp}")
+                    if isinstance(cp, str):
+                        lines.append(f"- [ ] {cp}")
                 why = issue.get('why_it_matters', '')
                 if why:
-                    for line in why.strip().split('\n'):
+                    for line in str(why).strip().split('\n'):
                         lines.append(f"> {line.strip()}")
                 lines.append("")
             lines.append("---")
@@ -1657,20 +1684,32 @@ def show_checklist(name: str, output_file: str = None, output_format: str = "mar
         lines.append("## ⚠️ 공통 위험 조항")
         lines.append("")
         for rc in risk_clauses:
+            if not isinstance(rc, dict):
+                continue
             risk_emoji = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}.get(rc.get('risk_level', 'medium'), '⚪')
-            lines.append(f"### {rc.get('clause', '')} {risk_emoji}")
+            clause_name = rc.get('clause', '')
+            if not clause_name:
+                continue
+            lines.append(f"### {clause_name} {risk_emoji}")
             for cp in rc.get('check_points', []):
-                lines.append(f"- [ ] {cp}")
+                if isinstance(cp, str):
+                    lines.append(f"- [ ] {cp}")
             laws = rc.get('laws', [])
             if laws:
                 lines.append("**관련 법령**:")
                 for law in laws:
+                    if not isinstance(law, dict):
+                        continue
                     law_name = law.get('name', '')
+                    if not law_name:
+                        continue
                     articles = law.get('articles', [])
                     link = _generate_law_link(law_name)
                     if articles:
-                        articles_str = ", ".join(articles)
+                        articles_str = ", ".join(str(a) for a in articles if a)
                         lines.append(f"- [{law_name}]({link}): {articles_str}")
+                    else:
+                        lines.append(f"- [{law_name}]({link})")
             lines.append("")
         lines.append("---")
         lines.append("")
@@ -1681,18 +1720,30 @@ def show_checklist(name: str, output_file: str = None, output_format: str = "mar
         lines.append("## 🔍 법률실사 영역")
         lines.append("")
         for area in dd_areas:
-            lines.append(f"### {area.get('area_name', '')}")
+            if not isinstance(area, dict):
+                continue
+            area_name = area.get('area_name', '')
+            if not area_name:
+                continue
+            lines.append(f"### {area_name}")
             lines.append("")
             for item in area.get('items', []):
-                lines.append(f"**{item.get('item', '')}**")
+                if not isinstance(item, dict):
+                    continue
+                item_name = item.get('item', '')
+                if item_name:
+                    lines.append(f"**{item_name}**")
                 for cp in item.get('check_points', []):
-                    lines.append(f"- [ ] {cp}")
+                    if isinstance(cp, str):
+                        lines.append(f"- [ ] {cp}")
                 docs = item.get('documents', [])
                 if docs:
-                    lines.append("*필요 서류*: " + ", ".join(docs))
+                    doc_list = [str(d) for d in docs if d]
+                    if doc_list:
+                        lines.append("*필요 서류*: " + ", ".join(doc_list))
                 why = item.get('why_it_matters', '')
                 if why:
-                    for line in why.strip().split('\n'):
+                    for line in str(why).strip().split('\n'):
                         lines.append(f"> {line.strip()}")
                 lines.append("")
             lines.append("---")
@@ -1700,21 +1751,26 @@ def show_checklist(name: str, output_file: str = None, output_format: str = "mar
 
     # 투자계약 주요 조항 (investment_contract_terms)
     inv_terms = data.get('investment_contract_terms', {})
-    if inv_terms:
+    if inv_terms and isinstance(inv_terms, dict):
         lines.append(f"## 💰 {inv_terms.get('title', '투자계약 주요 조항')}")
         lines.append("")
         note = inv_terms.get('note', '')
         if note:
-            for line in note.strip().split('\n'):
+            for line in str(note).strip().split('\n'):
                 lines.append(f"> {line.strip()}")
             lines.append("")
         for term in inv_terms.get('terms', []):
-            lines.append(f"**{term.get('term', '')}**")
+            if not isinstance(term, dict):
+                continue
+            term_name = term.get('term', '')
+            if term_name:
+                lines.append(f"**{term_name}**")
             for cp in term.get('check_points', []):
-                lines.append(f"- [ ] {cp}")
+                if isinstance(cp, str):
+                    lines.append(f"- [ ] {cp}")
             why = term.get('why_it_matters', '')
             if why:
-                for line in why.strip().split('\n'):
+                for line in str(why).strip().split('\n'):
                     lines.append(f"> {line.strip()}")
             lines.append("")
         lines.append("---")
@@ -1722,7 +1778,7 @@ def show_checklist(name: str, output_file: str = None, output_format: str = "mar
 
     # 규모별 적용 (scale_based_requirements) - 노동법
     scale_req = data.get('scale_based_requirements', {})
-    if scale_req:
+    if scale_req and isinstance(scale_req, dict):
         lines.append("## 📊 규모별 적용 정리")
         lines.append("")
         for key, val in scale_req.items():
@@ -1732,36 +1788,44 @@ def show_checklist(name: str, output_file: str = None, output_format: str = "mar
                 if excluded:
                     lines.append("*적용 제외*:")
                     for item in excluded:
-                        lines.append(f"  - ❌ {item}")
+                        if isinstance(item, str):
+                            lines.append(f"  - ❌ {item}")
                 applied = val.get('applied', [])
                 if applied:
                     lines.append("*적용*:")
                     for item in applied:
-                        lines.append(f"  - ✅ {item}")
+                        if isinstance(item, str):
+                            lines.append(f"  - ✅ {item}")
                 additional = val.get('additional', [])
                 if additional:
                     lines.append("*추가 의무*:")
                     for item in additional:
-                        lines.append(f"  - ➕ {item}")
+                        if isinstance(item, str):
+                            lines.append(f"  - ➕ {item}")
                 lines.append("")
         lines.append("---")
         lines.append("")
 
     # 약관규제법 참고 (unfair_terms_reference)
     unfair_ref = data.get('unfair_terms_reference', {})
-    if unfair_ref:
+    if unfair_ref and isinstance(unfair_ref, dict):
         lines.append(f"## 📖 {unfair_ref.get('title', '약관규제법 참고')}")
         lines.append("")
         for law in unfair_ref.get('laws', []):
+            if not isinstance(law, dict):
+                continue
             law_name = law.get('name', '')
+            if not law_name:
+                continue
             link = _generate_law_link(law_name)
             lines.append(f"**[{law_name}]({link})**")
             for art in law.get('articles', []):
-                lines.append(f"- {art}")
+                if isinstance(art, str):
+                    lines.append(f"- {art}")
         note = unfair_ref.get('note', '')
         if note:
             lines.append("")
-            for line in note.strip().split('\n'):
+            for line in str(note).strip().split('\n'):
                 lines.append(f"> {line.strip()}")
         lines.append("")
         lines.append("---")
@@ -1773,7 +1837,12 @@ def show_checklist(name: str, output_file: str = None, output_format: str = "mar
         lines.append(f"## ⚠️ {not_covered_dd.get('title', '범위 외')}")
         lines.append("")
         for item in not_covered_dd.get('items', []):
-            lines.append(f"- **{item.get('area', '')}**: {item.get('note', '')}")
+            if not isinstance(item, dict):
+                continue
+            area = item.get('area', '')
+            note = item.get('note', '')
+            if area:
+                lines.append(f"- **{area}**: {note}")
         lines.append("")
         lines.append("---")
         lines.append("")

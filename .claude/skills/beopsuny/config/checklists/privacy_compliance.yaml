@@ -9,6 +9,7 @@
 
 name: "개인정보처리자 자가점검"
 description: "개인정보 보호법 준수를 위한 필수 점검 사항"
+type: "checklist"
 category: "개인정보보호"
 last_updated: "2025-12-08"
 

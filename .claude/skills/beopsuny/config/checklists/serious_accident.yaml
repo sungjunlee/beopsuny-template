@@ -290,8 +290,10 @@ penalties:
 
   corporation:
     death:
+      description: "사망 사고 시"
       punishment: "50억원 이하 벌금"
     injury:
+      description: "부상/질병 사고 시"
       punishment: "10억원 이하 벌금"
 
   civil:

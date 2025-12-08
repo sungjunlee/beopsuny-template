@@ -10,6 +10,7 @@
 
 name: "스타트업 설립 체크리스트"
 description: "법인 설립부터 사업 시작까지 필수 법적 절차"
+type: "checklist"
 category: "기업설립"
 last_updated: "2025-12-08"
 
