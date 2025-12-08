@@ -106,6 +106,25 @@ gen_link.py law "민법" --article 750
 gen_link.py case "2022다12345"
 ```
 
+### 법적 체크리스트
+```bash
+fetch_law.py checklist list                              # 체크리스트 목록
+fetch_law.py checklist show startup                      # 스타트업 설립
+fetch_law.py checklist show privacy_compliance           # 개인정보처리자 점검
+fetch_law.py checklist show fair_trade                   # 공정거래 컴플라이언스
+fetch_law.py checklist show startup --output startup.md  # 파일 저장
+fetch_law.py checklist show startup --format json        # JSON 출력
+```
+
+**제공 체크리스트:**
+| 이름 | 내용 | 항목 |
+|------|------|------|
+| `startup` | 스타트업 설립 체크리스트 | 11개 |
+| `privacy_compliance` | 개인정보처리자 자가점검 | 12개 |
+| `fair_trade` | 공정거래 컴플라이언스 | 12개 |
+
+> 체크리스트 위치: `config/checklists/*.yaml`
+
 ### 법령 개정 비교
 ```bash
 # 두 버전의 법령 XML 파일 비교
@@ -380,6 +399,12 @@ fetch_law.py cases "손해배상" --court 대법원 --from 20240101
 
 # 국회 개정안
 fetch_bill.py track "개인정보보호법"
+
+# 체크리스트
+fetch_law.py checklist list                    # 목록 보기
+fetch_law.py checklist show startup            # 스타트업 설립
+fetch_law.py checklist show privacy_compliance # 개인정보 점검
+fetch_law.py checklist show fair_trade         # 공정거래
 ```
 
 ### WebSearch 치트시트
