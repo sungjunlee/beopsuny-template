@@ -121,6 +121,141 @@ compare_law.py data/raw/민법_이전.xml data/raw/민법_현행.xml --name 민�
 
 ---
 
+## Claude 실행 워크플로우 ⭐ IMPORTANT
+
+법률 조사 요청 시 **반드시** 아래 순서대로 실행하세요.
+
+### Phase 0: 횡단 이슈 체크 (계약서 검토 시)
+```
+1. 시행일/발효 시점 명시 여부
+2. 준거법 조항 존재 여부
+3. 위약금/손해배상 상한 설정 여부
+```
+
+### Phase 1: 법령 조문 확인 (스크립트)
+```bash
+# 1-1. 법령 조회
+fetch_law.py exact "개인정보보호법"
+
+# 1-2. 시행일 확인 (미시행 법령 주의!)
+# 출력에서 "시행일: YYYYMMDD" 확인
+
+# 1-3. 개정 이력 확인
+fetch_law.py recent --days 90
+```
+
+### Phase 2: 행정규칙 확인 (인덱스 or 스크립트)
+
+**우선순위 1: law_index.yaml 조회**
+```yaml
+# .claude/skills/beopsuny/config/law_index.yaml
+major_admin_rules:
+  개인정보보호법:
+    과징금_부과기준: "2100000229342"
+    안전성_확보조치: "2100000265956"
+```
+
+**우선순위 2: API 검색**
+```bash
+fetch_law.py search "개인정보 과징금" --type admrul
+fetch_law.py fetch --id 2100000229342 --type admrul
+```
+
+### Phase 3: 시행일 개정 확인 (스크립트)
+```bash
+# 최근 30일 이내 개정 여부 확인
+fetch_law.py recent --days 30
+```
+
+### Phase 4: 법령해석례 (스크립트)
+```bash
+fetch_policy.py interpret "개인정보 동의"
+```
+
+### Phase 5: 보도자료 (스크립트)
+```bash
+# 정부 기관 보도자료 확인
+fetch_policy.py rss pipc --keyword 과징금
+fetch_policy.py rss ftc --keyword 개인정보
+```
+
+### Phase 6: 제재 동향 (WebSearch 필수!) ⭐
+
+**반드시 웹검색을 실행**하여 최신 제재 사례 확인:
+
+```
+# 쿼리 템플릿 1: 법률 전문지
+WebSearch "{법령명} {위반행위} 과징금 제재 2024 2025 site:lawtimes.co.kr"
+WebSearch "{법령명} {위반행위} 행정처분 site:lawissue.co.kr"
+
+# 쿼리 템플릿 2: 정부 보도자료
+WebSearch "{부처명} {법령명} 과징금 2024 2025"
+WebSearch "개인정보보호위원회 과징금 부과 2025"
+
+# 쿼리 템플릿 3: 판례 변경
+WebSearch "{법령명} 대법원 전원합의체 2024 2025"
+```
+
+**예시:**
+```
+사용자: "개인정보보호법 위반하면 과징금 얼마?"
+
+Claude 실행:
+1. fetch_law.py exact "개인정보보호법"
+2. law_index.yaml → 과징금_부과기준 (2100000229342)
+3. fetch_law.py fetch --id 2100000229342 --type admrul
+4. WebSearch "개인정보보호법 과징금 2024 2025 site:lawtimes.co.kr"
+5. WebSearch "개인정보보호위원회 과징금 부과 2025"
+6. 통합 리포트 작성:
+   - 조문 (법령 본문)
+   - 기준 (과징금 부과기준 고시)
+   - 사례 (최근 제재 사례)
+   - 스탠스 (정부 집행 강화/완화 추세)
+```
+
+### Phase 7: 전문매체 검증 (WebSearch)
+```
+WebSearch "{키워드} site:lawtimes.co.kr 2024 2025"
+WebSearch "{키워드} site:lawissue.co.kr"
+```
+
+### Phase 8: 판례 변경 확인 (WebSearch)
+```
+WebSearch "{법령명} 대법원 전원합의체 2024 2025"
+```
+
+### Phase 9: 국회 개정안 (스크립트)
+```bash
+fetch_bill.py track "개인정보보호법"
+```
+
+### 최종 리포트 형식
+
+```markdown
+## {법령명} - {질문 요약}
+
+### 1. 법령 조문
+- 민법 제750조 (시행 2025.1.31.)
+- 링크: https://www.law.go.kr/법령/민법
+
+### 2. 행정규칙 기준
+- 과징금 부과기준: 매출액의 3% 이하
+- 링크: https://www.law.go.kr/행정규칙/...
+
+### 3. 최근 제재 사례 (웹검색 결과)
+- 2024.11: A사 10억 원 과징금 부과
+- 2025.01: B사 5억 원 과징금 부과
+- 추세: 2024년 하반기부터 **제재 강화**
+
+### 4. 정부 집행 스탠스
+- 개인정보보호위원회 보도자료 (2025.1.5)
+- "고의적 위반에 대해 최고 수준 과징금 부과 방침"
+
+⚠️ **참고**: 이 정보는 일반적인 법률 정보이며, 구체적 법률 문제는 변호사 상담 필요.
+```
+
+---
+
 ## 정부 집행 스탠스 파악 ⭐ IMPORTANT
 
 > 법령 조문보다 **정부의 실제 집행 스탠스**가 실무에 더 중요
