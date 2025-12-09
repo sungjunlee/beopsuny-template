@@ -11,7 +11,22 @@ name: "개인정보처리자 자가점검"
 description: "개인정보 보호법 준수를 위한 필수 점검 사항"
 type: "checklist"
 category: "개인정보보호"
-last_updated: "2025-12-08"
+last_updated: "2025-12-09"
+
+# 유지보수 정보
+maintenance:
+  review_cycle: "quarterly"
+  next_review: "2026-01"
+  volatile_items:
+    - "과징금 상한 (매출 4%)"
+    - "안전성 확보조치 기준 고시"
+    - "국외이전 요건"
+  watch_keywords:
+    - "개인정보보호법 개정"
+    - "개인정보 안전성 확보조치 기준"
+  changelog:
+    - date: "2025-12-09"
+      changes: "type 필드 추가"
 
 # ─────────────────────────────────────────────────────────
 # 초기 분기 질문 (Quick Triage)

@@ -13,8 +13,23 @@
 name: "공정거래 조사 가이드"
 description: "공정거래 이슈 검토 시 조사해야 할 질문 목록 (체크리스트 아님)"
 category: "공정거래"
-type: "research_guide"  # checklist가 아님을 명시
-last_updated: "2025-12-08"
+type: "research_guide"
+last_updated: "2025-12-09"
+
+# 유지보수 정보
+maintenance:
+  review_cycle: "semi-annual"
+  next_review: "2026-01"
+  volatile_items:
+    - "과징금 부과기준 (시행령)"
+    - "기업결합 신고 기준 금액"
+    - "하도급 대금 지급 기한"
+  watch_keywords:
+    - "공정거래법 시행령 개정"
+    - "과징금 부과 세부기준"
+  changelog:
+    - date: "2025-12-09"
+      changes: "maintenance 섹션 추가"
 
 # 중요 경고
 warnings:

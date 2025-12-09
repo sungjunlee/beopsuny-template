@@ -12,7 +12,21 @@ name: "중대재해처벌법 가이드"
 description: "경영책임자의 안전보건 확보의무 및 처벌 규정 체크리스트"
 category: "산업안전"
 type: "checklist"
-last_updated: "2025-12-08"
+last_updated: "2025-12-09"
+
+# 유지보수 정보
+maintenance:
+  review_cycle: "quarterly"
+  next_review: "2026-01"
+  volatile_items:
+    - "적용 대상 범위 (개정 논의 활발)"
+    - "처벌 수위 (형량 조정 논의)"
+  watch_keywords:
+    - "중대재해처벌법 개정"
+    - "중대재해처벌법 시행령"
+  changelog:
+    - date: "2025-12-09"
+      changes: "법인 처벌 규정 description 추가"
 
 # 중요 경고
 warnings:

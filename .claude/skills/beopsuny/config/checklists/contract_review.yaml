@@ -12,7 +12,19 @@ name: "계약서 검토 가이드"
 description: "계약 유형별 핵심 검토 포인트와 위험 조항"
 category: "계약법무"
 type: "research_guide"
-last_updated: "2025-12-08"
+last_updated: "2025-12-09"
+
+# 유지보수 정보
+maintenance:
+  review_cycle: "annual"
+  next_review: "2026-01"
+  volatile_items:
+    - "상가임대차 갱신기간/증액 상한"
+    - "약관규제법 조문 번호"
+  note: "계약 검토 원칙은 비교적 안정적이나, 임대차/약관 관련 법령 변경 주시"
+  changelog:
+    - date: "2025-12-09"
+      changes: "maintenance 섹션 추가"
 
 # 중요 경고
 warnings:

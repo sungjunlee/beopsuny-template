@@ -12,7 +12,18 @@ name: "노동/인사 체크리스트"
 description: "채용부터 퇴직까지 인사노무 관련 법적 의무 점검"
 category: "노동법"
 type: "checklist"
-last_updated: "2025-12-08"
+last_updated: "2025-12-09"
+
+# 유지보수 정보
+maintenance:
+  review_cycle: "quarterly"  # quarterly, semi-annual, annual
+  next_review: "2026-01"
+  volatile_items:
+    - "장애인 의무고용률 (2027년 3.3%, 2029년 3.5% 예정)"
+    - "최저임금 (매년 변경)"
+  changelog:
+    - date: "2025-12-09"
+      changes: "5인 미만 적용 기준 정확성 개선, 장애인 고용 50인 기준 정정"
 
 # 중요 경고
 warnings:

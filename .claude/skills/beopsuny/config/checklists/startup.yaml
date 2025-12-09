@@ -12,7 +12,19 @@ name: "스타트업 설립 체크리스트"
 description: "법인 설립부터 사업 시작까지 필수 법적 절차"
 type: "checklist"
 category: "기업설립"
-last_updated: "2025-12-08"
+last_updated: "2025-12-09"
+
+# 유지보수 정보
+maintenance:
+  review_cycle: "annual"
+  next_review: "2026-01"
+  volatile_items:
+    - "4대보험 신고 기한"
+    - "법인설립 등기 관련 상법 조문"
+  note: "설립 절차는 비교적 안정적. 조문 번호 변경 여부만 연간 확인"
+  changelog:
+    - date: "2025-12-09"
+      changes: "type 필드 추가, maintenance 섹션 추가"
 
 # ─────────────────────────────────────────────────────────
 # 초기 분기 질문 (Quick Triage)
