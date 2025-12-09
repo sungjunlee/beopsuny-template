@@ -3,14 +3,21 @@
 # =============================================================================
 # 공개 repo에서 secrets가 주입된 비공개 스킬 ZIP을 가족에게 이메일로 전송
 #
-# 필요한 GitHub Secrets:
-#   - BEOPSUNY_OC_CODE: 법령정보센터 OC 코드 (필수)
-#   - BEOPSUNY_ASSEMBLY_API_KEY: 국회 API 키 (선택)
-#   - BEOPSUNY_GATEWAY_URL: 게이트웨이 URL (선택, 해외 접근용)
-#   - BEOPSUNY_GATEWAY_KEY: 게이트웨이 API 키 (선택)
-#   - MAIL_USER: Gmail 주소
-#   - MAIL_APP_PASSWORD: Gmail 앱 비밀번호 (2FA 필요)
+# 필요한 GitHub Secrets (모두 FAMILY_ prefix):
+#
+#   [API 키 - 가족용 개인 키]
+#   - FAMILY_OC_CODE: 법령정보센터 OC 코드 (필수)
+#   - FAMILY_ASSEMBLY_API_KEY: 국회 API 키 (선택)
+#   - FAMILY_GATEWAY_URL: 게이트웨이 URL (선택, 해외 접근용)
+#   - FAMILY_GATEWAY_KEY: 게이트웨이 API 키 (선택)
+#
+#   [이메일 발송]
+#   - FAMILY_MAIL_USER: Gmail 주소
+#   - FAMILY_MAIL_APP_PASSWORD: Gmail 앱 비밀번호 (2FA 필요)
 #   - FAMILY_EMAILS: 수신자 이메일 (콤마 구분)
+#
+# 참고: FAMILY_ prefix는 이 secrets가 "법순이 프로젝트 공식"이 아닌
+#       "가족 배포용 개인 키"임을 명확히 구분하기 위함입니다.
 #
 # Gmail 앱 비밀번호 생성:
 #   1. https://myaccount.google.com/apppasswords
@@ -69,26 +76,26 @@ jobs:
       - name: Build skill ZIP with secrets
         run: |
           # 필수 secret 검증
-          if [ -z "${{ secrets.BEOPSUNY_OC_CODE }}" ]; then
-            echo "❌ Error: BEOPSUNY_OC_CODE secret is not set!"
+          if [ -z "${{ secrets.FAMILY_OC_CODE }}" ]; then
+            echo "❌ Error: FAMILY_OC_CODE secret is not set!"
             echo "Settings → Secrets → Actions에서 설정해주세요."
             exit 1
           fi
 
           # 빌드 명령 구성 (secrets는 echo 안함)
-          BUILD_CMD="python build_skill.py --oc-code='${{ secrets.BEOPSUNY_OC_CODE }}' --force"
+          BUILD_CMD="python build_skill.py --oc-code='${{ secrets.FAMILY_OC_CODE }}' --force"
 
           # 선택적 인자 추가
-          if [ -n "${{ secrets.BEOPSUNY_ASSEMBLY_API_KEY }}" ]; then
-            BUILD_CMD="$BUILD_CMD --assembly-key='${{ secrets.BEOPSUNY_ASSEMBLY_API_KEY }}'"
+          if [ -n "${{ secrets.FAMILY_ASSEMBLY_API_KEY }}" ]; then
+            BUILD_CMD="$BUILD_CMD --assembly-key='${{ secrets.FAMILY_ASSEMBLY_API_KEY }}'"
           fi
 
-          if [ -n "${{ secrets.BEOPSUNY_GATEWAY_URL }}" ]; then
-            BUILD_CMD="$BUILD_CMD --gateway-url='${{ secrets.BEOPSUNY_GATEWAY_URL }}'"
+          if [ -n "${{ secrets.FAMILY_GATEWAY_URL }}" ]; then
+            BUILD_CMD="$BUILD_CMD --gateway-url='${{ secrets.FAMILY_GATEWAY_URL }}'"
           fi
 
-          if [ -n "${{ secrets.BEOPSUNY_GATEWAY_KEY }}" ]; then
-            BUILD_CMD="$BUILD_CMD --gateway-key='${{ secrets.BEOPSUNY_GATEWAY_KEY }}'"
+          if [ -n "${{ secrets.FAMILY_GATEWAY_KEY }}" ]; then
+            BUILD_CMD="$BUILD_CMD --gateway-key='${{ secrets.FAMILY_GATEWAY_KEY }}'"
           fi
 
           # 빌드 실행 (명령 자체는 출력 안함 - secrets 포함)
@@ -119,11 +126,11 @@ jobs:
           server_address: smtp.gmail.com
           server_port: 465
           secure: true
-          username: ${{ secrets.MAIL_USER }}
-          password: ${{ secrets.MAIL_APP_PASSWORD }}
+          username: ${{ secrets.FAMILY_MAIL_USER }}
+          password: ${{ secrets.FAMILY_MAIL_APP_PASSWORD }}
           subject: "법순이 스킬 ${{ env.VERSION }}"
           to: ${{ secrets.FAMILY_EMAILS }}
-          from: ${{ secrets.MAIL_USER }}
+          from: ${{ secrets.FAMILY_MAIL_USER }}
           attachments: beopsuny-skill-${{ env.VERSION }}.zip
           body: |
             법순이(Beopsuny) 스킬 ${{ env.VERSION }} 배포
