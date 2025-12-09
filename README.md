@@ -60,11 +60,23 @@ python scripts/fetch_law.py search "최저임금" --type admrul
 
 ## 🚀 빠른 시작
 
-### 1. 저장소 생성
+### 방법 1: Plugin 설치 (권장)
+
+Claude Code에서 바로 설치:
+
+```bash
+# Marketplace 등록
+/plugin marketplace add sungjunlee/beopsuny-template
+
+# 설치
+/plugin install beopsuny
+```
+
+### 방법 2: Template Fork (커스터마이징용)
 
 GitHub에서 **"Use this template"** → 새 레포지토리 생성
 
-### 2. API 키 발급
+### API 키 발급
 
 | API | 발급처 | 필수 |
 |-----|--------|------|
@@ -302,13 +314,23 @@ python tests/run_scenarios.py --run basic-01  # 특정 시나리오
 
 ---
 
-## 📦 Claude Desktop 설치
+## 📦 Claude Desktop/Code 설치
+
+### Claude Code (CLI/Web)
+
+```bash
+# Marketplace에서 설치
+/plugin marketplace add sungjunlee/beopsuny-template
+/plugin install beopsuny
+```
+
+### Claude Desktop (ZIP)
 
 ```bash
 python build_skill.py
 ```
 
-생성된 `beopsuny-skill.zip`을 Claude Desktop Skills 메뉴에서 추가합니다.
+생성된 `beopsuny-skill.zip`을 Claude Desktop → Settings → Skills에서 추가합니다.
 
 > ⚠️ zip 파일에는 개인 API 키가 포함되므로 공유하지 마세요.
 
