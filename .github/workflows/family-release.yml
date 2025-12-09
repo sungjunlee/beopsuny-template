@@ -19,6 +19,11 @@
 name: Family Skill Release
 
 on:
+  # 정식 릴리즈 시 자동 발송
+  release:
+    types: [published]
+
+  # 수동 트리거 (테스트/긴급 배포용)
   workflow_dispatch:
     inputs:
       version:
@@ -39,9 +44,19 @@ jobs:
   build-and-send:
     runs-on: ubuntu-latest
 
+    # 버전: release 이벤트면 태그명, 수동이면 입력값
+    env:
+      VERSION: ${{ github.event.release.tag_name || inputs.version }}
+      RELEASE_NOTES: ${{ github.event.release.body || inputs.release_notes || '새 버전이 배포되었습니다.' }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Show release info
+        run: |
+          echo "📦 Version: $VERSION"
+          echo "📝 Trigger: ${{ github.event_name }}"
 
       # 보안: secrets를 echo하지 않고 파일에만 씀
       - name: Inject API credentials
@@ -61,24 +76,24 @@ jobs:
           cd .claude/skills
 
           # ZIP 생성 (불필요한 파일 제외)
-          zip -r ../../beopsuny-skill-${{ inputs.version }}.zip beopsuny \
+          zip -r ../../beopsuny-skill-${VERSION}.zip beopsuny \
             -x "*.pyc" \
             -x "*/__pycache__/*" \
             -x "*.git*" \
             -x "*.DS_Store"
 
           cd ../..
-          echo "📦 ZIP created: $(ls -lh beopsuny-skill-${{ inputs.version }}.zip | awk '{print $5}')"
+          echo "📦 ZIP created: $(ls -lh beopsuny-skill-${VERSION}.zip | awk '{print $5}')"
 
       - name: Verify ZIP contents
         run: |
           # ZIP 내용 확인 (파일 목록만, 내용은 안봄)
           echo "📋 ZIP contents:"
-          unzip -l beopsuny-skill-${{ inputs.version }}.zip | head -30
+          unzip -l beopsuny-skill-${VERSION}.zip | head -30
           echo "..."
 
           # .env가 포함되었는지 확인
-          if unzip -l beopsuny-skill-${{ inputs.version }}.zip | grep -q ".env"; then
+          if unzip -l beopsuny-skill-${VERSION}.zip | grep -q ".env"; then
             echo "✅ .env file included in ZIP"
           else
             echo "❌ .env file missing!"
@@ -93,15 +108,15 @@ jobs:
           secure: true
           username: ${{ secrets.MAIL_USER }}
           password: ${{ secrets.MAIL_APP_PASSWORD }}
-          subject: "법순이 스킬 ${{ inputs.version }}"
+          subject: "법순이 스킬 ${{ env.VERSION }}"
           to: ${{ secrets.FAMILY_EMAILS }}
           from: ${{ secrets.MAIL_USER }}
-          attachments: beopsuny-skill-${{ inputs.version }}.zip
+          attachments: beopsuny-skill-${{ env.VERSION }}.zip
           body: |
-            법순이(Beopsuny) 스킬 ${{ inputs.version }} 배포
+            법순이(Beopsuny) 스킬 ${{ env.VERSION }} 배포
             ================================================
 
-            ${{ inputs.release_notes || '새 버전이 배포되었습니다.' }}
+            ${{ env.RELEASE_NOTES }}
 
             설치 방법
             ---------
