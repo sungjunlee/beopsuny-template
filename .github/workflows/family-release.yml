@@ -36,9 +36,10 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: '버전 태그 (예: v1.0.0)'
-        required: true
+        description: '버전 (비우면 latest-YYYYMMDD-HHMM 자동 생성)'
+        required: false
         type: string
+        default: ''
       release_notes:
         description: '릴리즈 노트 (선택)'
         required: false
@@ -61,6 +62,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set version
+        run: |
+          if [ -n "$VERSION" ]; then
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
+          else
+            # 버전 미입력 시 자동 생성: latest-YYYYMMDD-HHMM
+            AUTO_VERSION="latest-$(date -u +'%Y%m%d-%H%M')"
+            echo "VERSION=$AUTO_VERSION" >> $GITHUB_ENV
+          fi
 
       - name: Show release info
         run: |
