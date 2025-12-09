@@ -1,0 +1,36 @@
+{
+  "name": "beopsuny",
+  "owner": {
+    "name": "Sungjun Lee",
+    "email": "hi@sjlee.me"
+  },
+  "metadata": {
+    "description": "Korean law research assistant - Legal research skill using National Law Information Center API",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "beopsuny",
+      "source": "./.claude/skills/beopsuny",
+      "description": "법순이 - 한국 법령/판례 검색, 다운로드, 분석 도우미. 국가법령정보센터 API를 활용한 정확한 법률 정보 제공. Korean law research assistant via National Law Information Center & Assembly APIs.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Sungjun Lee"
+      },
+      "homepage": "https://github.com/sungjunlee/beopsuny-template",
+      "repository": "https://github.com/sungjunlee/beopsuny-template",
+      "license": "MIT",
+      "keywords": [
+        "korean-law",
+        "legal-research",
+        "law-api",
+        "korea",
+        "legislation",
+        "precedent",
+        "judgment"
+      ],
+      "category": "legal",
+      "strict": false
+    }
+  ]
+}
