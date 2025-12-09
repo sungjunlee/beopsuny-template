@@ -106,6 +106,25 @@ gen_link.py law "민법" --article 750
 gen_link.py case "2022다12345"
 ```
 
+### 법적 체크리스트
+```bash
+fetch_law.py checklist list                              # 체크리스트 목록
+fetch_law.py checklist show startup                      # 스타트업 설립
+fetch_law.py checklist show privacy_compliance           # 개인정보처리자 점검
+fetch_law.py checklist show fair_trade                   # 공정거래 컴플라이언스
+fetch_law.py checklist show startup --output startup.md  # 파일 저장
+fetch_law.py checklist show startup --format json        # JSON 출력
+```
+
+**제공 체크리스트:**
+| 이름 | 내용 | 항목 |
+|------|------|------|
+| `startup` | 스타트업 설립 체크리스트 | 11개 |
+| `privacy_compliance` | 개인정보처리자 자가점검 | 12개 |
+| `fair_trade` | 공정거래 컴플라이언스 | 12개 |
+
+> 체크리스트 위치: `config/checklists/*.yaml`
+
 ### 법령 개정 비교
 ```bash
 # 두 버전의 법령 XML 파일 비교
@@ -118,6 +137,62 @@ compare_law.py data/raw/민법_이전.xml data/raw/민법_현행.xml --name 민�
 1. `fetch_law.py fetch --name "민법"` → 현행 법령 다운로드
 2. 연혁법령에서 이전 버전 다운로드 (law.go.kr 웹사이트)
 3. `compare_law.py old.xml new.xml` → 변경 사항 비교
+
+---
+
+## Claude 실행 워크플로우 ⭐ IMPORTANT
+
+법률 조사 요청 시 아래 순서대로 실행하세요.
+
+### 워크플로우 요약
+
+| Phase | 작업 | 도구 | 출력 |
+|-------|------|------|------|
+| 0 | 횡단 이슈 체크 | 수동 확인 | 시행일/준거법/상한 |
+| 1 | 법령 조문 | `exact "{법령}"` | 조문 + 시행일 |
+| 2 | **행정규칙** ⭐ | law_index.yaml 우선 | 과징금/기준 |
+| 3 | 개정 확인 | `recent --days 30` | 최근 개정 |
+| 4-5 | 해석례/보도자료 | 스크립트 | 법령해석/정책 |
+| **6-8** | **WebSearch** ⭐ | 템플릿 사용 | 사례/스탠스/판례 |
+| 9 | 국회 개정안 | `track "{법령}"` | 계류 법안 |
+
+### 핵심 Phase 상세
+
+#### Phase 2: 행정규칙 (가장 중요)
+```bash
+# 1. law_index.yaml에서 ID 확인 (빠름)
+# 2. 없으면 API 검색
+fetch_law.py search "과징금" --type admrul
+fetch_law.py fetch --id {ID} --type admrul
+```
+
+#### Phase 6-8: WebSearch 템플릿 ⭐
+```
+# 제재 동향 (Phase 6)
+"{법령명} 과징금 2024 2025 site:lawtimes.co.kr"
+"{부처명} {법령명} 제재 2025"
+
+# 판례 변경 (Phase 8)
+"{법령명} 대법원 전원합의체 2024 2025"
+```
+
+### 실행 예시
+
+**사용자**: "개인정보보호법 위반하면 과징금 얼마?"
+
+**Claude 실행**:
+```bash
+# Phase 1-2: 조문 + 행정규칙
+fetch_law.py exact "개인정보보호법"
+# → law_index.yaml: 과징금_부과기준 "2100000229342"
+fetch_law.py fetch --id 2100000229342 --type admrul
+
+# Phase 6: 최신 사례 (WebSearch)
+"개인정보보호법 과징금 2024 2025 site:lawtimes.co.kr"
+"개인정보보호위원회 제재 2025"
+```
+
+**리포트 구성**: 조문 → 기준 → 사례 → 스탠스 → 면책고지
 
 ---
 
@@ -301,3 +376,59 @@ fetch_law.py search "하도급" --type admrul   # 하도급 고시
 
 ### 면책 고지 (답변 마지막에 필수)
 > ⚠️ **참고**: 이 정보는 일반적인 법률 정보 제공 목적이며, 구체적인 법률 문제는 변호사와 상담하시기 바랍니다.
+
+---
+
+## Quick Reference (빠른 참조)
+
+### 자주 쓰는 명령어
+```bash
+# 법령 조회
+fetch_law.py exact "개인정보보호법"
+fetch_law.py exact "상법" --with-admrul  # 행정규칙 포함
+
+# 행정규칙 (과징금/기준)
+fetch_law.py search "과징금" --type admrul
+fetch_law.py fetch --id 2100000229342 --type admrul
+
+# 최근 개정
+fetch_law.py recent --days 30
+
+# 판례
+fetch_law.py cases "손해배상" --court 대법원 --from 20240101
+
+# 국회 개정안
+fetch_bill.py track "개인정보보호법"
+
+# 체크리스트
+fetch_law.py checklist list                    # 목록 보기
+fetch_law.py checklist show startup            # 스타트업 설립
+fetch_law.py checklist show privacy_compliance # 개인정보 점검
+fetch_law.py checklist show fair_trade         # 공정거래
+```
+
+### WebSearch 치트시트
+| 목적 | 쿼리 템플릿 |
+|------|------------|
+| 제재 사례 | `"{법령} 과징금 2024 2025 site:lawtimes.co.kr"` |
+| 정부 스탠스 | `"{부처} {법령} 제재 2025"` |
+| 판례 변경 | `"{법령} 대법원 전원합의체 2024 2025"` |
+| 법제처 해석 | `"{법령} 법제처 유권해석 2024 2025"` |
+
+### 주요 부처 코드
+| 부처 | 코드 | 관련 법령 |
+|------|------|----------|
+| 공정거래위원회 | `ftc` | 공정거래법, 하도급법 |
+| 개인정보보호위원회 | `pipc` | 개인정보보호법 |
+| 고용노동부 | `moel` | 근로기준법, 산재법 |
+| 금융위원회 | `fsc` | 자본시장법 |
+
+### law_index.yaml 주요 ID
+| 법령 | 행정규칙 | ID |
+|------|----------|-----|
+| 개인정보보호법 | 과징금_부과기준 | `2100000229342` |
+| 개인정보보호법 | 안전성_확보조치 | `2100000265956` |
+| 공정거래법 | 과징금_부과기준 | `2100000246412` |
+| 최저임금법 | 2025년_고시 | `2100000245668` |
+
+**전체 목록**: `.claude/skills/beopsuny/config/law_index.yaml`

@@ -8,6 +8,8 @@ Usage:
     python fetch_law.py fetch --id 법령ID [--with-decree]
     python fetch_law.py fetch --name "법령명" [--with-decree]
     python fetch_law.py recent [--days 30] [--from YYYYMMDD] [--to YYYYMMDD]
+    python fetch_law.py checklist list
+    python fetch_law.py checklist show <name> [--output FILE]
 """
 
 import argparse
@@ -35,6 +37,7 @@ SCRIPT_DIR = Path(__file__).parent
 SKILL_DIR = SCRIPT_DIR.parent
 CONFIG_PATH = SKILL_DIR / "config" / "settings.yaml"
 LAW_INDEX_PATH = SKILL_DIR / "config" / "law_index.yaml"
+CHECKLISTS_DIR = SKILL_DIR / "config" / "checklists"
 DATA_RAW_DIR = SKILL_DIR / "data" / "raw"
 DATA_PARSED_DIR = SKILL_DIR / "data" / "parsed"
 
@@ -1203,6 +1206,667 @@ def fetch_case_by_number(case_number: str):
     return fetch_case_by_id(case_id)
 
 
+# ============================================================
+# 체크리스트 기능
+# ============================================================
+
+def _generate_law_link(law_name: str, articles: list = None) -> str:
+    """법령 링크 생성 (gen_link.py 로직 재사용)"""
+    encoded_name = urllib.parse.quote(law_name)
+    base_url = f"https://www.law.go.kr/법령/{encoded_name}"
+
+    if articles:
+        # 첫 번째 조항으로 앵커 링크 생성
+        return base_url
+    return base_url
+
+
+def list_checklists():
+    """사용 가능한 체크리스트/조사가이드 목록 출력"""
+    if not CHECKLISTS_DIR.exists():
+        print("체크리스트 디렉토리가 없습니다.", file=sys.stderr)
+        return []
+
+    checklists = []
+    guides = []
+    for filepath in sorted(CHECKLISTS_DIR.glob("*.yaml")):
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f)
+                if data:
+                    item = {
+                        'name': filepath.stem,
+                        'title': data.get('name', filepath.stem),
+                        'description': data.get('description', ''),
+                        'category': data.get('category', ''),
+                        'item_count': len(data.get('items', [])),
+                        'type': data.get('type', 'checklist'),
+                    }
+                    if item['type'] == 'research_guide':
+                        guides.append(item)
+                    else:
+                        checklists.append(item)
+        except (yaml.YAMLError, OSError) as e:
+            print(f"Warning: {filepath.name} 로드 실패 - {e}", file=sys.stderr)
+            continue
+
+    # 체크리스트 출력
+    if checklists:
+        print("\n=== 체크리스트 (절차적 점검) ===\n")
+        for cl in checklists:
+            print(f"📋 {cl['name']}")
+            print(f"   제목: {cl['title']}")
+            print(f"   설명: {cl['description']}")
+            print(f"   분류: {cl['category']} | 항목 수: {cl['item_count']}개")
+            print()
+
+    # 조사 가이드 출력
+    if guides:
+        print("=== 조사 가이드 (탐색적 질문) ===\n")
+        print("⚠️  조사 가이드는 '체크리스트'가 아닙니다!")
+        print("   맥락에 따라 판단이 달라지므로, 질문을 시작점으로 심층 조사하세요.\n")
+        for g in guides:
+            print(f"🔍 {g['name']}")
+            print(f"   제목: {g['title']}")
+            print(f"   설명: {g['description']}")
+            print(f"   분류: {g['category']} | 질문 수: {g['item_count']}개")
+            print()
+
+    print("사용법: python scripts/fetch_law.py checklist show <name>")
+    print("예시: python scripts/fetch_law.py checklist show startup")
+    return checklists + guides
+
+
+def show_checklist(name: str, output_file: str = None, output_format: str = "markdown"):
+    """체크리스트/조사가이드 출력 (법령 링크 자동 생성)
+
+    Args:
+        name: 체크리스트 이름 (확장자 없이)
+        output_file: 출력 파일 경로 (없으면 stdout)
+        output_format: 출력 형식 (markdown, json)
+    """
+    filepath = CHECKLISTS_DIR / f"{name}.yaml"
+
+    if not filepath.exists():
+        print(f"Error: '{name}' 체크리스트를 찾을 수 없습니다.", file=sys.stderr)
+        print(f"사용 가능한 체크리스트: python scripts/fetch_law.py checklist list", file=sys.stderr)
+        sys.exit(1)
+
+    with open(filepath, 'r', encoding='utf-8') as f:
+        data = yaml.safe_load(f)
+
+    # 빈 YAML 파일 체크
+    if not data:
+        print(f"Error: '{name}' 체크리스트가 비어있습니다.", file=sys.stderr)
+        sys.exit(1)
+
+    if output_format == 'json':
+        # JSON 출력
+        output = json.dumps(data, ensure_ascii=False, indent=2)
+        if output_file:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(output)
+            print(f"저장됨: {output_file}")
+        else:
+            print(output)
+        return data
+
+    # 타입 확인 (research_guide vs checklist)
+    doc_type = data.get('type', 'checklist')
+    is_research_guide = doc_type == 'research_guide'
+
+    # Markdown 출력 생성
+    lines = []
+    lines.append(f"# {data.get('name', name)}")
+    lines.append("")
+    lines.append(f"> {data.get('description', '')}")
+    lines.append("")
+
+    # 경고 문구 (research_guide인 경우)
+    warnings = data.get('warnings', [])
+    if warnings:
+        lines.append("### ⚠️ 중요")
+        for w in warnings:
+            lines.append(f"- {w}")
+        lines.append("")
+
+    lines.append(f"**분류**: {data.get('category', '')} | **최종 업데이트**: {data.get('last_updated', '')}")
+    lines.append("")
+
+    # 초기 분기 질문 (Quick Triage)
+    triage = data.get('triage_questions', [])
+    if triage:
+        lines.append("## 🔀 초기 분기 질문")
+        lines.append("")
+        for t in triage:
+            q = t.get('question', '')
+            lines.append(f"**{q}**")
+            if 'if_yes' in t:
+                lines.append(f"  - Yes → {t['if_yes']}")
+            if 'branches' in t:
+                for b in t['branches']:
+                    lines.append(f"  - {b}")
+            if 'thresholds' in t:
+                for th in t['thresholds']:
+                    lines.append(f"  - {th}")
+            if 'examples' in t:
+                for ex in t['examples']:
+                    lines.append(f"    - {ex}")
+            lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 연관 체크리스트
+    related = data.get('related_checklists', [])
+    if related:
+        lines.append("## 📎 연관 체크리스트")
+        lines.append("")
+        for r in related:
+            lines.append(f"- **{r.get('name', '')}**: {r.get('when', '')}")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    for i, item in enumerate(data.get('items', []), 1):
+        if is_research_guide:
+            # 조사 가이드 형식
+            question = item.get('question', '')
+            lines.append(f"## {i}. {question}")
+            lines.append("")
+
+            # 왜 중요한지
+            why = item.get('why_it_matters', '')
+            if why:
+                lines.append("**왜 중요한가:**")
+                for line in why.strip().split('\n'):
+                    lines.append(f"> {line.strip()}")
+                lines.append("")
+
+            # 조사 액션
+            research_actions = item.get('research_actions', [])
+            if research_actions:
+                lines.append("**조사 방법:**")
+                for action in research_actions:
+                    lines.append(f"```")
+                    lines.append(action)
+                    lines.append(f"```")
+                lines.append("")
+
+            # 핵심 질문
+            key_questions = item.get('key_questions', [])
+            if key_questions:
+                lines.append("**검토할 질문:**")
+                for q in key_questions:
+                    lines.append(f"- ❓ {q}")
+                lines.append("")
+
+            # 위험 요소
+            risk_factors = item.get('risk_factors', [])
+            if risk_factors:
+                lines.append("**위험 신호:**")
+                for rf in risk_factors:
+                    lines.append(f"- 🚨 {rf}")
+                lines.append("")
+
+            # 참고 사항
+            note = item.get('note', '')
+            if note:
+                lines.append(f"**📌 참고**: {note}")
+                lines.append("")
+
+        else:
+            # 기존 체크리스트 형식
+            task = item.get('task', '')
+            risk_level = item.get('risk_level', 'medium')
+            risk_emoji = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}.get(risk_level, '⚪')
+
+            lines.append(f"## {i}. {task} {risk_emoji}")
+            lines.append("")
+
+            # 조건 표시
+            condition = item.get('condition')
+            if condition:
+                lines.append(f"**조건**: {condition}")
+                lines.append("")
+
+            # 기한 표시
+            deadline = item.get('deadline')
+            if deadline:
+                lines.append(f"**⚠️ 기한**: {deadline}")
+                lines.append("")
+
+            # 점검 사항
+            check_points = item.get('check_points', [])
+            if check_points:
+                lines.append("**점검 사항**:")
+                for cp in check_points:
+                    lines.append(f"- [ ] {cp}")
+                lines.append("")
+
+            # 참고 사항
+            notes = item.get('notes', '')
+            if notes:
+                lines.append("**참고**:")
+                for note_line in notes.strip().split('\n'):
+                    lines.append(f"> {note_line.strip()}")
+                lines.append("")
+
+        # 공통: 관련 법령 (링크 포함)
+        laws = item.get('laws', item.get('related_laws', []))
+        if laws:
+            lines.append("**관련 법령**:")
+            for law in laws:
+                if not isinstance(law, dict):
+                    continue
+                law_name = law.get('name', '')
+                if not law_name:
+                    continue
+                articles = law.get('articles', [])
+                link = _generate_law_link(law_name)
+
+                if articles:
+                    articles_str = ", ".join(str(a) for a in articles if a)
+                    lines.append(f"- [{law_name}]({link}): {articles_str}")
+                else:
+                    lines.append(f"- [{law_name}]({link})")
+            lines.append("")
+
+        # 공통: 관련 행정규칙
+        admin_rules = item.get('admin_rules', [])
+        if admin_rules:
+            lines.append("**관련 행정규칙 (고시/훈령)**:")
+            for rule in admin_rules:
+                if not isinstance(rule, str):
+                    continue
+                rule_link = f"https://www.law.go.kr/행정규칙/{urllib.parse.quote(rule)}"
+                lines.append(f"- [{rule}]({rule_link})")
+            lines.append("")
+
+        lines.append("---")
+        lines.append("")
+
+    # 조사 워크플로우 (research_guide인 경우)
+    workflow = data.get('research_workflow', {})
+    if workflow:
+        lines.append("## 조사 워크플로우")
+        lines.append("")
+        for step_key in sorted(workflow.keys()):
+            step = workflow[step_key]
+            lines.append(f"**{step.get('name', step_key)}**: {step.get('action', '')}")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 이 가이드에서 다루지 않는 주요 이슈 (research_guide)
+    not_covered = data.get('not_covered', [])
+    if not_covered and isinstance(not_covered, list):
+        lines.append("## ⚠️ 이 가이드에서 다루지 않는 이슈")
+        lines.append("")
+        for nc in not_covered:
+            if isinstance(nc, dict):
+                area = nc.get('area', '')
+                lines.append(f"**{area}** ({nc.get('when_relevant', '')})")
+                for issue in nc.get('issues', []):
+                    lines.append(f"  - {issue}")
+            elif isinstance(nc, str):
+                lines.append(f"- {nc}")
+            lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 놓치기 쉬운 항목 (Common Oversights)
+    oversights = data.get('common_oversights', [])
+    if oversights:
+        lines.append("## 💡 놓치기 쉬운 항목")
+        lines.append("")
+        for o in oversights:
+            item_name = o.get('item', '')
+            issue = o.get('issue', '')
+            action = o.get('action', o.get('tip', ''))
+            lines.append(f"**{item_name}**")
+            lines.append(f"  - 문제: {issue}")
+            lines.append(f"  - 조치: {action}")
+            lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 성장 단계별 검토 (startup)
+    growth = data.get('growth_stage_considerations', {})
+    if growth:
+        lines.append("## 📈 성장 단계별 추가 검토")
+        lines.append("")
+        for stage, items in growth.items():
+            stage_name = {'seed_stage': '🌱 Seed', 'series_a_plus': '🚀 Series A+', 'scaling': '📊 Scaling'}.get(stage, stage)
+            lines.append(f"**{stage_name}**")
+            for item in items:
+                lines.append(f"  - {item}")
+            lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 주기적 점검 (privacy)
+    periodic = data.get('periodic_review', {})
+    if periodic:
+        lines.append("## 🔄 주기적 점검 사항")
+        lines.append("")
+        if 'annually' in periodic:
+            lines.append("**연간**")
+            for item in periodic['annually']:
+                lines.append(f"  - {item}")
+            lines.append("")
+        if 'on_change' in periodic:
+            lines.append("**변경 시**")
+            for item in periodic['on_change']:
+                lines.append(f"  - {item}")
+            lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 업종별 추가 검토 (privacy)
+    sector_notes = data.get('sector_specific_notes', [])
+    if sector_notes:
+        lines.append("## 🏢 업종별 추가 검토")
+        lines.append("")
+        for sn in sector_notes:
+            lines.append(f"**{sn.get('sector', '')}**: {sn.get('additional', '')}")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 연관 법령 맵 (fair_trade)
+    laws_map = data.get('related_laws_map', [])
+    if laws_map:
+        lines.append("## 📚 상황별 연관 법령")
+        lines.append("")
+        for lm in laws_map:
+            lines.append(f"**{lm.get('context', '')}**")
+            for law in lm.get('laws', []):
+                lines.append(f"  - {law}")
+            if lm.get('note'):
+                lines.append(f"  - 💡 {lm['note']}")
+            lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 제재 동향 확인 팁 (fair_trade)
+    enforcement_tips = data.get('enforcement_check_tips', [])
+    if enforcement_tips:
+        lines.append("## 🔍 제재 동향 확인 팁")
+        lines.append("")
+        for tip in enforcement_tips:
+            lines.append(f"- {tip}")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 적용 대상 (scope) - 중대재해처벌법 등
+    scope_items = data.get('scope', [])
+    if scope_items:
+        lines.append("## 📋 적용 대상 판단")
+        lines.append("")
+        for item in scope_items:
+            if not isinstance(item, dict):
+                continue
+            task = item.get('task', '')
+            if not task:
+                continue
+            lines.append(f"### {task}")
+            for cp in item.get('check_points', []):
+                if isinstance(cp, str):
+                    lines.append(f"- [ ] {cp}")
+            notes = item.get('notes', '')
+            if notes:
+                for note_line in str(notes).strip().split('\n'):
+                    lines.append(f"> {note_line.strip()}")
+            lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 처벌 규정 (penalties) - 중대재해처벌법 등
+    penalties = data.get('penalties', {})
+    if penalties:
+        lines.append(f"## ⚖️ {penalties.get('title', '처벌 규정')}")
+        lines.append("")
+        individual = penalties.get('individual', {})
+        if individual:
+            lines.append("**개인 (경영책임자 등)**")
+            for key, val in individual.items():
+                if isinstance(val, dict):
+                    lines.append(f"- {val.get('description', key)}: {val.get('punishment', '')}")
+            lines.append("")
+        corporation = penalties.get('corporation', {})
+        if corporation:
+            lines.append("**법인**")
+            for key, val in corporation.items():
+                if isinstance(val, dict):
+                    lines.append(f"- {val.get('description', key)}: {val.get('punishment', '')}")
+            lines.append("")
+        civil = penalties.get('civil', {})
+        if civil:
+            lines.append(f"**민사**: {civil.get('description', '')} - {civil.get('punishment', '')}")
+            lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 계약 유형별 검토 (contract_types) - 계약서 검토 가이드
+    contract_types = data.get('contract_types', [])
+    if contract_types:
+        lines.append("## 📝 계약 유형별 검토 포인트")
+        lines.append("")
+        for ct in contract_types:
+            if not isinstance(ct, dict):
+                continue
+            type_name = ct.get('type_name', '')
+            if not type_name:
+                continue
+            lines.append(f"### {type_name}")
+            lines.append("")
+            for issue in ct.get('key_issues', []):
+                if not isinstance(issue, dict):
+                    continue
+                issue_name = issue.get('issue', '')
+                if issue_name:
+                    lines.append(f"**{issue_name}**")
+                for cp in issue.get('check_points', []):
+                    if isinstance(cp, str):
+                        lines.append(f"- [ ] {cp}")
+                why = issue.get('why_it_matters', '')
+                if why:
+                    for line in str(why).strip().split('\n'):
+                        lines.append(f"> {line.strip()}")
+                lines.append("")
+            lines.append("---")
+            lines.append("")
+
+    # 공통 위험 조항 (common_risk_clauses) - 계약서 검토 가이드
+    risk_clauses = data.get('common_risk_clauses', [])
+    if risk_clauses:
+        lines.append("## ⚠️ 공통 위험 조항")
+        lines.append("")
+        for rc in risk_clauses:
+            if not isinstance(rc, dict):
+                continue
+            risk_emoji = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}.get(rc.get('risk_level', 'medium'), '⚪')
+            clause_name = rc.get('clause', '')
+            if not clause_name:
+                continue
+            lines.append(f"### {clause_name} {risk_emoji}")
+            for cp in rc.get('check_points', []):
+                if isinstance(cp, str):
+                    lines.append(f"- [ ] {cp}")
+            laws = rc.get('laws', [])
+            if laws:
+                lines.append("**관련 법령**:")
+                for law in laws:
+                    if not isinstance(law, dict):
+                        continue
+                    law_name = law.get('name', '')
+                    if not law_name:
+                        continue
+                    articles = law.get('articles', [])
+                    link = _generate_law_link(law_name)
+                    if articles:
+                        articles_str = ", ".join(str(a) for a in articles if a)
+                        lines.append(f"- [{law_name}]({link}): {articles_str}")
+                    else:
+                        lines.append(f"- [{law_name}]({link})")
+            lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 실사 영역 (due_diligence_areas) - 투자 실사 가이드
+    dd_areas = data.get('due_diligence_areas', [])
+    if dd_areas:
+        lines.append("## 🔍 법률실사 영역")
+        lines.append("")
+        for area in dd_areas:
+            if not isinstance(area, dict):
+                continue
+            area_name = area.get('area_name', '')
+            if not area_name:
+                continue
+            lines.append(f"### {area_name}")
+            lines.append("")
+            for item in area.get('items', []):
+                if not isinstance(item, dict):
+                    continue
+                item_name = item.get('item', '')
+                if item_name:
+                    lines.append(f"**{item_name}**")
+                for cp in item.get('check_points', []):
+                    if isinstance(cp, str):
+                        lines.append(f"- [ ] {cp}")
+                docs = item.get('documents', [])
+                if docs:
+                    doc_list = [str(d) for d in docs if d]
+                    if doc_list:
+                        lines.append("*필요 서류*: " + ", ".join(doc_list))
+                why = item.get('why_it_matters', '')
+                if why:
+                    for line in str(why).strip().split('\n'):
+                        lines.append(f"> {line.strip()}")
+                lines.append("")
+            lines.append("---")
+            lines.append("")
+
+    # 투자계약 주요 조항 (investment_contract_terms)
+    inv_terms = data.get('investment_contract_terms', {})
+    if inv_terms and isinstance(inv_terms, dict):
+        lines.append(f"## 💰 {inv_terms.get('title', '투자계약 주요 조항')}")
+        lines.append("")
+        note = inv_terms.get('note', '')
+        if note:
+            for line in str(note).strip().split('\n'):
+                lines.append(f"> {line.strip()}")
+            lines.append("")
+        for term in inv_terms.get('terms', []):
+            if not isinstance(term, dict):
+                continue
+            term_name = term.get('term', '')
+            if term_name:
+                lines.append(f"**{term_name}**")
+            for cp in term.get('check_points', []):
+                if isinstance(cp, str):
+                    lines.append(f"- [ ] {cp}")
+            why = term.get('why_it_matters', '')
+            if why:
+                for line in str(why).strip().split('\n'):
+                    lines.append(f"> {line.strip()}")
+            lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 규모별 적용 (scale_based_requirements) - 노동법
+    scale_req = data.get('scale_based_requirements', {})
+    if scale_req and isinstance(scale_req, dict):
+        lines.append("## 📊 규모별 적용 정리")
+        lines.append("")
+        for key, val in scale_req.items():
+            if isinstance(val, dict):
+                lines.append(f"**{val.get('name', key)}**")
+                excluded = val.get('excluded', [])
+                if excluded:
+                    lines.append("*적용 제외*:")
+                    for item in excluded:
+                        if isinstance(item, str):
+                            lines.append(f"  - ❌ {item}")
+                applied = val.get('applied', [])
+                if applied:
+                    lines.append("*적용*:")
+                    for item in applied:
+                        if isinstance(item, str):
+                            lines.append(f"  - ✅ {item}")
+                additional = val.get('additional', [])
+                if additional:
+                    lines.append("*추가 의무*:")
+                    for item in additional:
+                        if isinstance(item, str):
+                            lines.append(f"  - ➕ {item}")
+                lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 약관규제법 참고 (unfair_terms_reference)
+    unfair_ref = data.get('unfair_terms_reference', {})
+    if unfair_ref and isinstance(unfair_ref, dict):
+        lines.append(f"## 📖 {unfair_ref.get('title', '약관규제법 참고')}")
+        lines.append("")
+        for law in unfair_ref.get('laws', []):
+            if not isinstance(law, dict):
+                continue
+            law_name = law.get('name', '')
+            if not law_name:
+                continue
+            link = _generate_law_link(law_name)
+            lines.append(f"**[{law_name}]({link})**")
+            for art in law.get('articles', []):
+                if isinstance(art, str):
+                    lines.append(f"- {art}")
+        note = unfair_ref.get('note', '')
+        if note:
+            lines.append("")
+            for line in str(note).strip().split('\n'):
+                lines.append(f"> {line.strip()}")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 실사에서 제외 (not_covered for DD)
+    not_covered_dd = data.get('not_covered', {})
+    if isinstance(not_covered_dd, dict) and not_covered_dd.get('title'):
+        lines.append(f"## ⚠️ {not_covered_dd.get('title', '범위 외')}")
+        lines.append("")
+        for item in not_covered_dd.get('items', []):
+            if not isinstance(item, dict):
+                continue
+            area = item.get('area', '')
+            note = item.get('note', '')
+            if area:
+                lines.append(f"- **{area}**: {note}")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # 면책 고지
+    disclaimer = data.get('disclaimer', '')
+    if disclaimer:
+        lines.append(f"> ⚠️ **면책**: {disclaimer.strip()}")
+    else:
+        lines.append("> ⚠️ **참고**: 이 문서는 일반적인 정보 제공 목적이며,")
+        lines.append("> 구체적인 법률 문제는 변호사와 상담하시기 바랍니다.")
+
+    output = "\n".join(lines)
+
+    if output_file:
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(output)
+        print(f"저장됨: {output_file}")
+    else:
+        print(output)
+
+    return data
+
+
 def main():
     parser = argparse.ArgumentParser(description='Korean Law Fetcher')
     subparsers = parser.add_subparsers(dest='command', help='Commands')
@@ -1260,6 +1924,20 @@ def main():
     recent_parser.add_argument('--format', '-f', default='text', choices=['text', 'json'],
                                help='출력 형식 (text: 텍스트, json: JSON)')
 
+    # checklist 명령
+    checklist_parser = subparsers.add_parser('checklist', help='법적 체크리스트 조회')
+    checklist_subparsers = checklist_parser.add_subparsers(dest='checklist_command', help='체크리스트 명령')
+
+    # checklist list
+    checklist_list_parser = checklist_subparsers.add_parser('list', help='사용 가능한 체크리스트 목록')
+
+    # checklist show
+    checklist_show_parser = checklist_subparsers.add_parser('show', help='체크리스트 출력')
+    checklist_show_parser.add_argument('name', help='체크리스트 이름 (예: startup, privacy_compliance, fair_trade)')
+    checklist_show_parser.add_argument('--output', '-o', help='출력 파일 경로 (예: checklist.md)')
+    checklist_show_parser.add_argument('--format', '-f', default='markdown', choices=['markdown', 'json'],
+                                       help='출력 형식 (markdown, json)')
+
     args = parser.parse_args()
 
     if args.command == 'search':
@@ -1282,6 +1960,13 @@ def main():
             sys.exit(1)
     elif args.command == 'recent':
         get_recent_laws(args.days, args.from_date, args.to_date, date_type=args.date_type, output_format=args.format)
+    elif args.command == 'checklist':
+        if args.checklist_command == 'list':
+            list_checklists()
+        elif args.checklist_command == 'show':
+            show_checklist(args.name, output_file=args.output, output_format=args.format)
+        else:
+            checklist_parser.print_help()
     else:
         parser.print_help()
 

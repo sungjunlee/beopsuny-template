@@ -32,17 +32,28 @@ python .claude/skills/beopsuny/scripts/fetch_law.py search "키워드" --type ad
 
 ## 법률 조사 워크플로우 (9단계)
 
+법률 조사 요청 시 **반드시** 아래 순서대로 실행하세요.
+
 | Phase | 단계 | 확인 사항 | 도구 |
 |-------|------|----------|------|
 | **1차 소스** | 1 | 법령 조문 | `fetch_law.py exact "법령명"` |
-| | 2 | 행정규칙 | `--type admrul` |
+| | 2 | 행정규칙 (law_index.yaml 우선) | `--type admrul` or 인덱스 |
 | | 3 | 시행일/개정 | `recent --days 30` |
 | **집행 동향** | 4 | 법령해석례 | `fetch_policy.py interpret` |
 | | 5 | 보도자료 | `fetch_policy.py rss [부처]` |
-| | 6 | **제재 동향** | **WebSearch 필수** |
-| **2차 검증** | 7 | 전문매체 | `site:lawtimes.co.kr` |
-| | 8 | 판례 변경 | `"전원합의체" 2024 2025` |
+| | 6 | **제재 동향** ⭐ | **WebSearch 필수** |
+| **2차 검증** | 7 | 전문매체 | WebSearch `site:lawtimes.co.kr` |
+| | 8 | 판례 변경 | WebSearch `"전원합의체" 2024 2025` |
 | | 9 | 국회 개정안 | `fetch_bill.py track` |
+
+**Phase 6 WebSearch 쿼리 템플릿:**
+```
+"{법령명} {위반행위} 과징금 제재 2024 2025 site:lawtimes.co.kr"
+"{부처명} {법령명} 과징금 2024 2025"
+"{법령명} 대법원 전원합의체 2024 2025"
+```
+
+**상세 워크플로우**: `.claude/skills/beopsuny/SKILL.md` → "Claude 실행 워크플로우" 섹션 참조
 
 ---
 
