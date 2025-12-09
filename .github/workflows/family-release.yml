@@ -68,6 +68,13 @@ jobs:
       # build_skill.py를 사용하여 ZIP 생성 (secrets 주입)
       - name: Build skill ZIP with secrets
         run: |
+          # 필수 secret 검증
+          if [ -z "${{ secrets.BEOPSUNY_OC_CODE }}" ]; then
+            echo "❌ Error: BEOPSUNY_OC_CODE secret is not set!"
+            echo "Settings → Secrets → Actions에서 설정해주세요."
+            exit 1
+          fi
+
           # 빌드 명령 구성 (secrets는 echo 안함)
           BUILD_CMD="python build_skill.py --oc-code='${{ secrets.BEOPSUNY_OC_CODE }}' --force"
 
