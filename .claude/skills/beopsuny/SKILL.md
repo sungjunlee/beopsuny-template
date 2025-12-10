@@ -122,6 +122,10 @@ fetch_law.py checklist show startup --format json        # JSON 출력
 | `startup` | 스타트업 설립 체크리스트 | 11개 |
 | `privacy_compliance` | 개인정보처리자 자가점검 | 12개 |
 | `fair_trade` | 공정거래 컴플라이언스 | 12개 |
+| `contract_review` | 계약서 검토 체크리스트 | 10개 |
+| `labor_hr` | 노동/인사 컴플라이언스 | 12개 |
+| `serious_accident` | 중대재해처벌법 점검 | 10개 |
+| `investment_due_diligence` | 투자 실사 체크리스트 | 11개 |
 
 > 체크리스트 위치: `config/checklists/*.yaml`
 
