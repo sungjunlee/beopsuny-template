@@ -411,6 +411,26 @@ fetch_law.py checklist show privacy_compliance # 개인정보 점검
 fetch_law.py checklist show fair_trade         # 공정거래
 ```
 
+### 주간 규제 점검 패턴
+
+정기적으로 규제 변화를 확인할 때 아래 순서로 조회:
+
+```bash
+# 1. 최근 시행/공포 법령
+fetch_law.py recent --days 7
+fetch_law.py recent --days 7 --date-type anc   # 공포 기준
+
+# 2. 관심 법령 개정안 (예시)
+fetch_bill.py track "개인정보보호법"
+fetch_bill.py track "공정거래법"
+
+# 3. 부처 동향
+fetch_policy.py rss pipc                        # 개인정보위
+fetch_policy.py rss ftc                         # 공정위
+```
+
+> 💡 자동 알림이 아닌 **직접 조회** 방식. 중요한 판단은 변호사가 직접.
+
 ### WebSearch 치트시트
 | 목적 | 쿼리 템플릿 |
 |------|------------|
