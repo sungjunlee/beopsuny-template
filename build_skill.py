@@ -117,6 +117,19 @@ def build_zip(oc_code: str, assembly_api_key: str, output_path: Path, gateway_co
         print(f"오류: 스킬 디렉토리를 찾을 수 없습니다: {skill_dir}")
         sys.exit(1)
 
+    # 필수 디렉토리/파일 검증
+    required = [
+        (skill_dir / "SKILL.md", "SKILL.md"),
+        (skill_dir / "scripts" / "common", "scripts/common/ (경로 상수 모듈)"),
+        (skill_dir / "assets", "assets/ (정적 데이터)"),
+    ]
+    missing = [(path, desc) for path, desc in required if not path.exists()]
+    if missing:
+        print("오류: 필수 파일/디렉토리가 없습니다:", file=sys.stderr)
+        for path, desc in missing:
+            print(f"  - {desc}: {path}", file=sys.stderr)
+        sys.exit(1)
+
     with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zf:
         # Claude Skills ZIP 스펙: skill 폴더가 ZIP 루트에 포함되어야 함
         # https://support.claude.com/en/articles/12512198-how-to-create-custom-skills
