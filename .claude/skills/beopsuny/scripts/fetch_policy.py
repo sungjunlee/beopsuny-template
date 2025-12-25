@@ -41,11 +41,8 @@ try:
 except ImportError:
     HAS_GATEWAY = False
 
-# 스크립트 위치 기준으로 경로 설정
-SCRIPT_DIR = Path(__file__).parent
-SKILL_DIR = SCRIPT_DIR.parent
-CONFIG_PATH = SKILL_DIR / "config" / "settings.yaml"
-DATA_POLICY_DIR = SKILL_DIR / "data" / "policy"
+# 중앙화된 경로 상수 사용 (common/paths.py)
+from common.paths import CONFIG_PATH, DATA_POLICY_DIR
 
 # 환경변수 이름
 ENV_OC_CODE = "BEOPSUNY_OC_CODE"

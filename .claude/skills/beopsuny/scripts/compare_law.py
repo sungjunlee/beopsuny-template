@@ -13,8 +13,8 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).parent
-SKILL_DIR = SCRIPT_DIR.parent
+# 중앙화된 경로 상수 사용 (common/paths.py)
+from common.paths import SKILL_DIR
 
 
 def extract_articles_from_xml(xml_path: Path) -> dict:
