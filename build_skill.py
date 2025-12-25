@@ -95,7 +95,7 @@ gateway:
 #   api_key: "your-api-key"  # 선택
 '''
 
-    return f'''# Korean Law API Configuration
+    return f'''# Beopsuny Settings (secrets only)
 # 국가법령정보 공동활용 API 설정
 
 # OC Code (Open API Code)
@@ -105,21 +105,6 @@ oc_code: "{oc_code}"
 # 열린국회정보 API Key (국회 의안 조회용)
 # open.assembly.go.kr에서 발급받은 인증키
 {assembly_line}
-
-# API Settings
-api:
-  base_url: "http://www.law.go.kr/DRF"
-  timeout: 30
-  default_display: 20  # 기본 검색 결과 수
-
-# 검색 대상 코드
-targets:
-  law: "법령"
-  prec: "판례"
-  ordin: "자치법규"
-  admrul: "행정규칙"
-  expc: "법령해석례"
-  detc: "헌재결정례"
 {gateway_section}'''
 
 
@@ -146,25 +131,39 @@ def build_zip(oc_code: str, assembly_api_key: str, output_path: Path, gateway_co
         settings_content = create_settings_yaml(oc_code, assembly_api_key, gateway_config)
         zf.writestr("beopsuny/config/settings.yaml", settings_content)
 
-        # config/*.yaml (법령 인덱스, 조항 레퍼런스, 용어 사전)
-        config_dir = skill_dir / "config"
-        if config_dir.exists():
-            for yaml_file in sorted(config_dir.glob("*.yaml")):
-                # settings.yaml은 위에서 API 키 주입해서 생성하므로 제외
-                if yaml_file.name != "settings.yaml":
-                    zf.write(yaml_file, f"beopsuny/config/{yaml_file.name}")
+        # assets/*.yaml (정적 데이터: 법령 인덱스, 용어 사전 등)
+        assets_dir = skill_dir / "assets"
+        if assets_dir.exists():
+            for yaml_file in sorted(assets_dir.glob("*.yaml")):
+                zf.write(yaml_file, f"beopsuny/assets/{yaml_file.name}")
 
-        # docs/*.md (가이드 문서)
-        docs_dir = skill_dir / "docs"
-        if docs_dir.exists():
-            for md_file in sorted(docs_dir.glob("*.md")):
-                zf.write(md_file, f"beopsuny/docs/{md_file.name}")
+            # assets/checklists/*.yaml
+            checklists_dir = assets_dir / "checklists"
+            if checklists_dir.exists():
+                for yaml_file in sorted(checklists_dir.glob("*.yaml")):
+                    zf.write(yaml_file, f"beopsuny/assets/checklists/{yaml_file.name}")
+                # MAINTENANCE.md도 포함
+                maintenance_md = checklists_dir / "MAINTENANCE.md"
+                if maintenance_md.exists():
+                    zf.write(maintenance_md, "beopsuny/assets/checklists/MAINTENANCE.md")
+
+        # references/*.md (가이드 문서)
+        refs_dir = skill_dir / "references"
+        if refs_dir.exists():
+            for md_file in sorted(refs_dir.glob("*.md")):
+                zf.write(md_file, f"beopsuny/references/{md_file.name}")
 
         # scripts/*.py
         scripts_dir = skill_dir / "scripts"
         if scripts_dir.exists():
             for py_file in scripts_dir.glob("*.py"):
                 zf.write(py_file, f"beopsuny/scripts/{py_file.name}")
+
+            # scripts/common/ 모듈 (경로 상수)
+            common_dir = scripts_dir / "common"
+            if common_dir.exists():
+                for py_file in common_dir.glob("*.py"):
+                    zf.write(py_file, f"beopsuny/scripts/common/{py_file.name}")
 
         # data 디렉토리 구조 (빈 디렉토리용 .gitkeep)
         zf.writestr("beopsuny/data/raw/.gitkeep", "")
