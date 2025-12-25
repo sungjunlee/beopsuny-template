@@ -175,7 +175,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `Q${quarter} ${date.getFullYear()} 체크리스트 정기 점검`,
-              body: `## 점검 항목\n- [ ] labor_hr.yaml\n- [ ] serious_accident.yaml\n- [ ] privacy_compliance.yaml\n- [ ] fair_trade.yaml\n- [ ] contract_review.yaml\n- [ ] investment_due_diligence.yaml\n- [ ] startup.yaml\n\n참고: config/checklists/MAINTENANCE.md`,
+              body: `## 점검 항목\n- [ ] labor_hr.yaml\n- [ ] serious_accident.yaml\n- [ ] privacy_compliance.yaml\n- [ ] fair_trade.yaml\n- [ ] contract_review.yaml\n- [ ] investment_due_diligence.yaml\n- [ ] startup.yaml\n\n참고: assets/checklists/MAINTENANCE.md`,
               labels: ['maintenance', 'checklist']
             });
 ```
