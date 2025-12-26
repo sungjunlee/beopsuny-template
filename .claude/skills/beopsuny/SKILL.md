@@ -11,7 +11,7 @@ compatibility: |
   - 선택: BEOPSUNY_ASSEMBLY_API_KEY (국회 API)
   - 선택: BEOPSUNY_GATEWAY_URL (해외 사용 시)
 metadata:
-  version: "2.0.0"
+  # version follows project git tags (see CHANGELOG.md)
   author: "legal-stack"
   language: "ko"
   updated: "2025-12-26"
