@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - "외부 참고 사이트" → references/external-sites.md
 - Redundant data in settings.yaml (major_laws, targets)
 
-## [1.x.x] - Previous versions
+## [1.0.0] - 2024-12-01
 
 ### Added
 - Initial release with Korean law research capabilities
