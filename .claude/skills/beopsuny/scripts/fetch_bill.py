@@ -86,6 +86,22 @@ def _get_status_emoji(proc_result: str) -> str:
     return "📋"
 
 
+def _extract_committee(item: dict) -> str:
+    """
+    API 응답 항목에서 위원회명 추출
+
+    CURR_COMMITTEE(현재 소관위원회)를 우선 사용하고,
+    없으면 COMMITTEE(최초 회부 위원회) 사용
+
+    Args:
+        item: API 응답 항목 (dict)
+
+    Returns:
+        위원회명 문자열 (없으면 빈 문자열)
+    """
+    return item.get("CURR_COMMITTEE", "") or item.get("COMMITTEE", "")
+
+
 def _is_exact_law_match(law_name: str, bill_name: str) -> bool:
     """
     법령명이 의안명에 정확히 매칭되는지 확인
@@ -360,7 +376,7 @@ def search_bills(query: str, age: int = CURRENT_AGE, proc_result: str = None,
         proposer = item.get("RST_PROPOSER", "") or item.get("PROPOSER", "")
         propose_dt = item.get("PROPOSE_DT", "")
         proc_result_text = item.get("PROC_RESULT", "")
-        committee = item.get("CURR_COMMITTEE", "") or item.get("COMMITTEE", "")
+        committee = _extract_committee(item)
 
         results.append({
             "bill_id": bill_id,
@@ -543,7 +559,7 @@ def get_pending_bills(keyword: str = None, age: int = CURRENT_AGE, display: int 
         bill_name = item.get("BILL_NAME", "")
         proposer = item.get("PROPOSER", "")
         propose_dt = item.get("PROPOSE_DT", "")
-        committee = item.get("CURR_COMMITTEE", "") or item.get("COMMITTEE", "")
+        committee = _extract_committee(item)
 
         results.append({
             "bill_no": bill_no,
@@ -646,7 +662,7 @@ def track_law_bills(law_name: str, age: int = CURRENT_AGE, output_format: str = 
             proposer = item.get("RST_PROPOSER", "") or item.get("PROPOSER", "")
             propose_dt = item.get("PROPOSE_DT", "")
             proc_result = item.get("PROC_RESULT", "")
-            committee = item.get("CURR_COMMITTEE", "") or item.get("COMMITTEE", "")
+            committee = _extract_committee(item)
 
             all_results.append({
                 "bill_id": bill_id,
