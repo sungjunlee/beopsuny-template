@@ -103,7 +103,8 @@ def _extract_committee(item: dict) -> str:
 
 
 def _build_bill_dict(item: dict, *, include_bill_id: bool = False,
-                     include_proc_result: bool = False) -> dict:
+                     include_proc_result: bool = False,
+                     proposer_only: bool = False) -> dict:
     """
     API 응답 항목에서 의안 정보 딕셔너리 생성
 
@@ -113,14 +114,21 @@ def _build_bill_dict(item: dict, *, include_bill_id: bool = False,
         item: API 응답 항목 (dict)
         include_bill_id: BILL_ID 포함 여부
         include_proc_result: PROC_RESULT 포함 여부
+        proposer_only: True면 PROPOSER만 사용 (계류의안 API용),
+                       False면 RST_PROPOSER → PROPOSER fallback (기본)
 
     Returns:
         표준화된 의안 정보 딕셔너리
     """
+    if proposer_only:
+        proposer = item.get("PROPOSER", "")
+    else:
+        proposer = item.get("RST_PROPOSER", "") or item.get("PROPOSER", "")
+
     result = {
         "bill_no": item.get("BILL_NO", ""),
         "name": item.get("BILL_NAME", ""),
-        "proposer": item.get("RST_PROPOSER", "") or item.get("PROPOSER", ""),
+        "proposer": proposer,
         "propose_date": item.get("PROPOSE_DT", ""),
         "committee": _extract_committee(item),
     }
@@ -485,26 +493,18 @@ def get_recent_bills(days: int = 30, keyword: str = None, age: int = CURRENT_AGE
         if propose_dt and propose_dt < cutoff_date:
             continue
 
-        bill_no = item.get("BILL_NO", "")
         bill_name = item.get("BILL_NAME", "")
-        proposer = item.get("RST_PROPOSER", "") or item.get("PROPOSER", "")
-        proc_result_text = item.get("PROC_RESULT", "")
 
         # 키워드 필터링
         if keyword and keyword not in bill_name:
             continue
 
-        results.append({
-            "bill_no": bill_no,
-            "name": bill_name,
-            "proposer": proposer,
-            "propose_date": propose_dt,
-            "proc_result": proc_result_text,
-        })
+        bill_data = _build_bill_dict(item, include_proc_result=True)
+        results.append(bill_data)
 
         if not is_json:
-            print(f"📝 [{bill_no}] {bill_name}")
-            print(f"   대표발의: {proposer} | 발의일: {propose_dt}")
+            print(f"📝 [{bill_data['bill_no']}] {bill_data['name']}")
+            print(f"   대표발의: {bill_data['proposer']} | 발의일: {bill_data['propose_date']}")
             print()
 
     if is_json:
@@ -572,7 +572,8 @@ def get_pending_bills(keyword: str = None, age: int = CURRENT_AGE, display: int 
     results = []
 
     for item in rows:
-        bill_data = _build_bill_dict(item)
+        # 계류의안 API는 PROPOSER만 사용 (RST_PROPOSER fallback 없음)
+        bill_data = _build_bill_dict(item, proposer_only=True)
         results.append(bill_data)
 
         if not is_json:

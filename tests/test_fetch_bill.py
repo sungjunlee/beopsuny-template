@@ -158,6 +158,66 @@ class TestBuildBillDict:
         assert result["propose_date"] == ""
         assert result["committee"] == ""
 
+    def test_proposer_fallback_from_none(self):
+        """Should fall back to PROPOSER when RST_PROPOSER is None."""
+        item = {
+            "BILL_NO": "2201234",
+            "BILL_NAME": "민법 일부개정법률안",
+            "RST_PROPOSER": None,
+            "PROPOSER": "정부",
+            "PROPOSE_DT": "2024-02-01",
+        }
+        result = _build_bill_dict(item)
+        assert result["proposer"] == "정부"
+
+    def test_bill_id_missing_when_requested(self):
+        """Should return empty string for bill_id when key is missing but requested."""
+        item = {
+            "BILL_NO": "2201234",
+            "BILL_NAME": "테스트 법률안",
+            "PROPOSE_DT": "2024-01-01",
+            # BILL_ID is intentionally missing
+        }
+        result = _build_bill_dict(item, include_bill_id=True)
+        assert result["bill_id"] == ""
+
+    def test_proc_result_missing_when_requested(self):
+        """Should return empty string for proc_result when key is missing but requested."""
+        item = {
+            "BILL_NO": "2201234",
+            "BILL_NAME": "테스트 법률안",
+            "PROPOSE_DT": "2024-01-01",
+            # PROC_RESULT is intentionally missing
+        }
+        result = _build_bill_dict(item, include_proc_result=True)
+        assert result["proc_result"] == ""
+
+    def test_proposer_only_uses_proposer_field(self):
+        """With proposer_only=True, should use only PROPOSER field (for pending bills API)."""
+        item = {
+            "BILL_NO": "2201234",
+            "BILL_NAME": "계류 의안 테스트",
+            "RST_PROPOSER": "홍길동의원",
+            "PROPOSER": "정부",
+            "PROPOSE_DT": "2024-03-01",
+        }
+        result = _build_bill_dict(item, proposer_only=True)
+        # Should use PROPOSER, not RST_PROPOSER
+        assert result["proposer"] == "정부"
+
+    def test_proposer_only_false_prefers_rst_proposer(self):
+        """With proposer_only=False (default), should prefer RST_PROPOSER."""
+        item = {
+            "BILL_NO": "2201234",
+            "BILL_NAME": "일반 의안 테스트",
+            "RST_PROPOSER": "홍길동의원",
+            "PROPOSER": "정부",
+            "PROPOSE_DT": "2024-03-01",
+        }
+        result = _build_bill_dict(item, proposer_only=False)
+        # Should use RST_PROPOSER
+        assert result["proposer"] == "홍길동의원"
+
 
 if __name__ == "__main__":
     import pytest
