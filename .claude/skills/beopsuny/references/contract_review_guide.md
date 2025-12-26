@@ -227,3 +227,7 @@ fetch_law.py exact "약관의 규제에 관한 법률"
 > 최종 검토는 반드시 변호사와 상담하세요.
 >
 > 참고: [law.go.kr](https://law.go.kr) | [glaw.scourt.go.kr](https://glaw.scourt.go.kr)
+
+---
+
+[← SKILL.md로 돌아가기](../SKILL.md)

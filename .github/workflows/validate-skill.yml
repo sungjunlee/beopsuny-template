@@ -1,0 +1,124 @@
+name: Validate Agent Skill
+
+on:
+  pull_request:
+    paths:
+      - '.claude/skills/beopsuny/**'
+  push:
+    branches: [main]
+    paths:
+      - '.claude/skills/beopsuny/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Validate Skill Structure
+        id: validate
+        run: |
+          python3 << 'EOF'
+          import yaml
+          import os
+          import sys
+
+          skill_path = '.claude/skills/beopsuny'
+          errors = []
+          warnings = []
+
+          # 1. Check SKILL.md exists
+          skill_md = os.path.join(skill_path, 'SKILL.md')
+          if not os.path.exists(skill_md):
+              errors.append("SKILL.md not found")
+              sys.exit(1)
+
+          # 2. Validate frontmatter
+          with open(skill_md, 'r') as f:
+              content = f.read()
+
+          parts = content.split('---', 2)
+          if len(parts) < 3:
+              errors.append("Invalid frontmatter format")
+          else:
+              try:
+                  data = yaml.safe_load(parts[1])
+
+                  # Required fields
+                  if not data.get('name'):
+                      errors.append("Missing required field: name")
+                  elif not data['name'].replace('-', '').replace('_', '').isalnum():
+                      errors.append("name must be alphanumeric with hyphens/underscores only")
+
+                  if not data.get('description'):
+                      errors.append("Missing required field: description")
+                  elif len(data['description']) > 1024:
+                      errors.append("description exceeds 1024 characters")
+
+                  # Check name matches directory
+                  dir_name = os.path.basename(skill_path)
+                  if data.get('name') != dir_name:
+                      warnings.append(f"name '{data.get('name')}' doesn't match directory '{dir_name}'")
+
+                  # Optional but recommended fields
+                  if not data.get('license'):
+                      warnings.append("Missing recommended field: license")
+
+                  print(f"✓ Frontmatter valid")
+                  print(f"  name: {data.get('name')}")
+                  print(f"  description: {data.get('description', '')[:50]}...")
+                  if data.get('metadata'):
+                      print(f"  version: {data['metadata'].get('version', 'N/A')}")
+
+              except yaml.YAMLError as e:
+                  errors.append(f"YAML parse error: {e}")
+
+          # 3. Check recommended directories
+          for dir_name in ['scripts', 'references', 'assets']:
+              dir_path = os.path.join(skill_path, dir_name)
+              if os.path.isdir(dir_path):
+                  print(f"✓ {dir_name}/ directory exists")
+              else:
+                  warnings.append(f"Missing recommended directory: {dir_name}/")
+
+          # 4. Check line count
+          line_count = len(content.split('\n'))
+          print(f"✓ SKILL.md line count: {line_count}")
+          if line_count > 500:
+              warnings.append(f"SKILL.md exceeds 500 lines ({line_count} lines)")
+
+          # Report
+          print()
+          if warnings:
+              print("⚠️ Warnings:")
+              for w in warnings:
+                  print(f"  - {w}")
+
+          if errors:
+              print("❌ Errors:")
+              for e in errors:
+                  print(f"  - {e}")
+              sys.exit(1)
+
+          print()
+          print("✅ Skill validation passed")
+          EOF
+
+      - name: Validation Summary
+        if: always()
+        run: |
+          if [ "${{ steps.validate.outcome }}" == "success" ]; then
+            echo "✅ All validations passed"
+          else
+            echo "❌ Validation failed - check logs above"
+            exit 1
+          fi
