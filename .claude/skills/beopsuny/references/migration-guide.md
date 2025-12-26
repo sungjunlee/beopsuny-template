@@ -35,7 +35,7 @@
 
 ### Before/After 비교
 
-```
+```text
 v1.x                              v2.0
 ────────────────────────────────────────────────────────────────
 beopsuny/                         beopsuny/
@@ -212,12 +212,15 @@ from common.paths import LAW_INDEX_PATH
 ### 5.5 검증
 
 ```bash
+# scripts 디렉토리로 이동
+cd .claude/skills/beopsuny/scripts
+
 # 스크립트 정상 동작 확인
-python scripts/fetch_law.py --help
-python scripts/fetch_bill.py --help
+python fetch_law.py --help
+python fetch_bill.py --help
 
 # 검색 테스트
-python scripts/fetch_law.py exact "민법"
+python fetch_law.py exact "민법"
 ```
 
 ---
@@ -281,8 +284,8 @@ git checkout <commit-hash>
 
 ## 도움이 필요하신가요?
 
-- GitHub Issues: 버그 리포트 및 기능 요청
-- SKILL.md: 전체 스킬 문서
+- [GitHub Issues](https://github.com/sungjunlee/beopsuny-template/issues) - 버그 리포트 및 기능 요청
+- [SKILL.md](../SKILL.md) - 전체 스킬 문서
 
 ---
 
