@@ -86,6 +86,62 @@ def _get_status_emoji(proc_result: str) -> str:
     return "📋"
 
 
+def _extract_committee(item: dict) -> str:
+    """
+    API 응답 항목에서 위원회명 추출
+
+    CURR_COMMITTEE(현재 소관위원회)를 우선 사용하고,
+    없으면 COMMITTEE(최초 회부 위원회) 사용
+
+    Args:
+        item: API 응답 항목 (dict)
+
+    Returns:
+        위원회명 문자열 (없으면 빈 문자열)
+    """
+    return item.get("CURR_COMMITTEE", "") or item.get("COMMITTEE", "")
+
+
+def _build_bill_dict(item: dict, *, include_bill_id: bool = False,
+                     include_proc_result: bool = False,
+                     proposer_only: bool = False) -> dict:
+    """
+    API 응답 항목에서 의안 정보 딕셔너리 생성
+
+    공통 필드를 추출하고, 선택적으로 bill_id와 proc_result를 포함
+
+    Args:
+        item: API 응답 항목 (dict)
+        include_bill_id: BILL_ID 포함 여부
+        include_proc_result: PROC_RESULT 포함 여부
+        proposer_only: True면 PROPOSER만 사용 (계류의안 API용),
+                       False면 RST_PROPOSER → PROPOSER fallback (기본)
+
+    Returns:
+        표준화된 의안 정보 딕셔너리
+    """
+    if proposer_only:
+        proposer = item.get("PROPOSER", "")
+    else:
+        proposer = item.get("RST_PROPOSER", "") or item.get("PROPOSER", "")
+
+    result = {
+        "bill_no": item.get("BILL_NO", ""),
+        "name": item.get("BILL_NAME", ""),
+        "proposer": proposer,
+        "propose_date": item.get("PROPOSE_DT", ""),
+        "committee": _extract_committee(item),
+    }
+
+    if include_bill_id:
+        result["bill_id"] = item.get("BILL_ID", "")
+
+    if include_proc_result:
+        result["proc_result"] = item.get("PROC_RESULT", "")
+
+    return result
+
+
 def _is_exact_law_match(law_name: str, bill_name: str) -> bool:
     """
     법령명이 의안명에 정확히 매칭되는지 확인
@@ -354,33 +410,18 @@ def search_bills(query: str, age: int = CURRENT_AGE, proc_result: str = None,
     results = []
 
     for item in rows:
-        bill_id = item.get("BILL_ID", "")
-        bill_no = item.get("BILL_NO", "")
-        bill_name = item.get("BILL_NAME", "")
-        proposer = item.get("RST_PROPOSER", "") or item.get("PROPOSER", "")
-        propose_dt = item.get("PROPOSE_DT", "")
-        proc_result_text = item.get("PROC_RESULT", "")
-        committee = item.get("CURR_COMMITTEE", "") or item.get("COMMITTEE", "")
-
-        results.append({
-            "bill_id": bill_id,
-            "bill_no": bill_no,
-            "name": bill_name,
-            "proposer": proposer,
-            "propose_date": propose_dt,
-            "proc_result": proc_result_text,
-            "committee": committee,
-        })
+        bill_data = _build_bill_dict(item, include_bill_id=True, include_proc_result=True)
+        results.append(bill_data)
 
         if not is_json:
-            status_emoji = _get_status_emoji(proc_result_text)
-            print(f"{status_emoji} [{bill_no}] {bill_name}")
-            print(f"   대표발의: {proposer}")
-            print(f"   발의일: {propose_dt} | 상태: {proc_result_text or '계류'}")
-            if committee:
-                print(f"   소관위: {committee}")
+            status_emoji = _get_status_emoji(bill_data["proc_result"])
+            print(f"{status_emoji} [{bill_data['bill_no']}] {bill_data['name']}")
+            print(f"   대표발의: {bill_data['proposer']}")
+            print(f"   발의일: {bill_data['propose_date']} | 상태: {bill_data['proc_result'] or '계류'}")
+            if bill_data["committee"]:
+                print(f"   소관위: {bill_data['committee']}")
             # BILL_ID가 있으면 사용, 없으면 PRC_의안번호 형식
-            link_id = bill_id if bill_id else f"PRC_{bill_no}"
+            link_id = bill_data["bill_id"] if bill_data["bill_id"] else f"PRC_{bill_data['bill_no']}"
             print(f"   링크: https://likms.assembly.go.kr/bill/billDetail.do?billId={link_id}")
             print()
 
@@ -452,26 +493,18 @@ def get_recent_bills(days: int = 30, keyword: str = None, age: int = CURRENT_AGE
         if propose_dt and propose_dt < cutoff_date:
             continue
 
-        bill_no = item.get("BILL_NO", "")
         bill_name = item.get("BILL_NAME", "")
-        proposer = item.get("RST_PROPOSER", "") or item.get("PROPOSER", "")
-        proc_result_text = item.get("PROC_RESULT", "")
 
         # 키워드 필터링
         if keyword and keyword not in bill_name:
             continue
 
-        results.append({
-            "bill_no": bill_no,
-            "name": bill_name,
-            "proposer": proposer,
-            "propose_date": propose_dt,
-            "proc_result": proc_result_text,
-        })
+        bill_data = _build_bill_dict(item, include_proc_result=True)
+        results.append(bill_data)
 
         if not is_json:
-            print(f"📝 [{bill_no}] {bill_name}")
-            print(f"   대표발의: {proposer} | 발의일: {propose_dt}")
+            print(f"📝 [{bill_data['bill_no']}] {bill_data['name']}")
+            print(f"   대표발의: {bill_data['proposer']} | 발의일: {bill_data['propose_date']}")
             print()
 
     if is_json:
@@ -539,26 +572,16 @@ def get_pending_bills(keyword: str = None, age: int = CURRENT_AGE, display: int 
     results = []
 
     for item in rows:
-        bill_no = item.get("BILL_NO", "")
-        bill_name = item.get("BILL_NAME", "")
-        proposer = item.get("PROPOSER", "")
-        propose_dt = item.get("PROPOSE_DT", "")
-        committee = item.get("CURR_COMMITTEE", "") or item.get("COMMITTEE", "")
-
-        results.append({
-            "bill_no": bill_no,
-            "name": bill_name,
-            "proposer": proposer,
-            "propose_date": propose_dt,
-            "committee": committee,
-        })
+        # 계류의안 API는 PROPOSER만 사용 (RST_PROPOSER fallback 없음)
+        bill_data = _build_bill_dict(item, proposer_only=True)
+        results.append(bill_data)
 
         if not is_json:
-            print(f"⏳ [{bill_no}] {bill_name}")
-            print(f"   제안자: {proposer}")
-            print(f"   발의일: {propose_dt}")
-            if committee:
-                print(f"   소관위: {committee}")
+            print(f"⏳ [{bill_data['bill_no']}] {bill_data['name']}")
+            print(f"   제안자: {bill_data['proposer']}")
+            print(f"   발의일: {bill_data['propose_date']}")
+            if bill_data["committee"]:
+                print(f"   소관위: {bill_data['committee']}")
             print()
 
     if is_json:
@@ -642,21 +665,8 @@ def track_law_bills(law_name: str, age: int = CURRENT_AGE, output_format: str = 
                 continue
             seen_bill_nos.add(bill_no)
 
-            bill_id = item.get("BILL_ID", "")
-            proposer = item.get("RST_PROPOSER", "") or item.get("PROPOSER", "")
-            propose_dt = item.get("PROPOSE_DT", "")
-            proc_result = item.get("PROC_RESULT", "")
-            committee = item.get("CURR_COMMITTEE", "") or item.get("COMMITTEE", "")
-
-            all_results.append({
-                "bill_id": bill_id,
-                "bill_no": bill_no,
-                "name": bill_name,
-                "proposer": proposer,
-                "propose_date": propose_dt,
-                "proc_result": proc_result,
-                "committee": committee,
-            })
+            bill_data = _build_bill_dict(item, include_bill_id=True, include_proc_result=True)
+            all_results.append(bill_data)
 
     # 발의일 기준 정렬 (최신순)
     all_results.sort(key=lambda x: x["propose_date"], reverse=True)
