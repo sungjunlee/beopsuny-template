@@ -13,9 +13,6 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).parent
-SKILL_DIR = SCRIPT_DIR.parent
-
 
 def extract_articles_from_xml(xml_path: Path) -> dict:
     """XML에서 조문 딕셔너리 추출"""

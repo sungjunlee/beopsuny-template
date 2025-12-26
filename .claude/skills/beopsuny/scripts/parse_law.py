@@ -14,9 +14,8 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).parent
-SKILL_DIR = SCRIPT_DIR.parent
-DATA_PARSED_DIR = SKILL_DIR / "data" / "parsed"
+# 중앙화된 경로 상수 사용 (common/paths.py)
+from common.paths import DATA_PARSED_DIR
 
 
 def parse_law_xml(xml_path: Path) -> dict:

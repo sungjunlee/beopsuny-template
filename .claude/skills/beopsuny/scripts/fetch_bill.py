@@ -22,11 +22,11 @@ from pathlib import Path
 
 import yaml
 
-# 스크립트 위치 기준으로 경로 설정
-SCRIPT_DIR = Path(__file__).parent
-SKILL_DIR = SCRIPT_DIR.parent
-CONFIG_PATH = SKILL_DIR / "config" / "settings.yaml"
-DATA_DIR = SKILL_DIR / "data" / "bills"
+# 중앙화된 경로 상수 사용 (common/paths.py)
+from common.paths import CONFIG_PATH, DATA_BILLS_DIR
+
+# 하위 호환성을 위한 별칭
+DATA_DIR = DATA_BILLS_DIR
 
 # 열린국회정보 API 기본 URL (HTTPS는 400 에러 발생, HTTP 사용)
 BASE_URL = "http://open.assembly.go.kr/portal/openapi"

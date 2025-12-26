@@ -34,9 +34,8 @@ from typing import Optional
 
 import yaml
 
-# 스크립트 위치 기준 경로
-SCRIPT_DIR = Path(__file__).parent
-CONFIG_PATH = SCRIPT_DIR.parent / "config" / "settings.yaml"
+# 중앙화된 경로 상수 사용 (common/paths.py)
+from common.paths import CONFIG_PATH
 
 # 환경변수 이름
 ENV_GATEWAY_URL = "BEOPSUNY_GATEWAY_URL"

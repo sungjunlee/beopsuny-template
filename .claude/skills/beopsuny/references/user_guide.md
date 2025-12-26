@@ -321,7 +321,7 @@ fetch_law.py fetch --id 2100000229342 --type admrul  # 개인정보 과징금 �
 | 공정거래법 | 과징금_부과기준 | `2100000246412` |
 | 최저임금법 | 2025년_고시 | `2100000245668` |
 
-전체 목록: `config/law_index.yaml`
+전체 목록: `assets/law_index.yaml`
 
 ---
 
@@ -378,7 +378,7 @@ copy AGENTS.md GEMINI.md
 ## 관련 문서
 
 - [계약서 검토 가이드](contract_review_guide.md) - 계약서 검토 워크플로우
-- [체크리스트 유지보수 가이드](../config/checklists/MAINTENANCE.md) - 체크리스트 관리
+- [체크리스트 유지보수 가이드](../assets/checklists/MAINTENANCE.md) - 체크리스트 관리
 
 ---
 

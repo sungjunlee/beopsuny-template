@@ -127,7 +127,7 @@ fetch_law.py checklist show startup --format json        # JSON 출력
 | `serious_accident` | 중대재해처벌법 점검 | 10개 |
 | `investment_due_diligence` | 투자 실사 체크리스트 | 11개 |
 
-> 체크리스트 위치: `config/checklists/*.yaml`
+> 체크리스트 위치: `assets/checklists/*.yaml`
 
 ### 법령 개정 비교
 ```bash
@@ -268,9 +268,9 @@ export BEOPSUNY_GATEWAY_API_KEY='your-api-key'
 
 | 파일 | 내용 | 건수 |
 |------|------|------|
-| `config/clause_references.yaml` | 조항-법령 매핑 DB | 30개 조항 |
-| `config/legal_terms.yaml` | 영한 법률용어 사전 | 100개 용어 |
-| `docs/contract_review_guide.md` | 검토 워크플로우 플레이북 | - |
+| `assets/clause_references.yaml` | 조항-법령 매핑 DB | 30개 조항 |
+| `assets/legal_terms.yaml` | 영한 법률용어 사전 | 100개 용어 |
+| `references/contract_review_guide.md` | 검토 워크플로우 플레이북 | - |
 
 ### 사용 예시
 
@@ -302,14 +302,14 @@ fetch_law.py exact "하도급거래 공정화에 관한 법률"
 fetch_law.py search "하도급" --type admrul   # 하도급 고시
 ```
 
-→ 상세: `docs/contract_review_guide.md` Phase 0 참조
+→ 상세: `references/contract_review_guide.md` Phase 0 참조
 
 ### 주의사항
 
 > ⚠️ 본 기능은 **초벌 검토 보조**용입니다.
 > 최종 검토는 반드시 **변호사와 상담**하세요.
 
-상세 가이드: `docs/contract_review_guide.md`
+상세 가이드: `references/contract_review_guide.md`
 
 ---
 
@@ -334,7 +334,7 @@ fetch_law.py search "하도급" --type admrul   # 하도급 고시
 | 기업결합 (M&A) | 공정거래법 | 공정위 |
 | 공급망 실사 (ESG) | - | EU CSDDD |
 
-상세 가이드 (12개 영역 + 업종별 참고): `docs/international_guide.md`
+상세 가이드 (12개 영역 + 업종별 참고): `references/international_guide.md`
 
 ---
 
@@ -480,4 +480,4 @@ fetch_policy.py rss ftc                         # 공정위
 | 공정거래법 | 과징금_부과기준 | `2100000246412` |
 | 최저임금법 | 2025년_고시 | `2100000245668` |
 
-**전체 목록**: `.claude/skills/beopsuny/config/law_index.yaml`
+**전체 목록**: `.claude/skills/beopsuny/assets/law_index.yaml`

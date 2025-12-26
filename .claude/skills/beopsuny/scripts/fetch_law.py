@@ -32,17 +32,18 @@ try:
 except ImportError:
     HAS_GATEWAY = False
 
-# 스크립트 위치 기준으로 경로 설정
-SCRIPT_DIR = Path(__file__).parent
-SKILL_DIR = SCRIPT_DIR.parent
-CONFIG_PATH = SKILL_DIR / "config" / "settings.yaml"
-LAW_INDEX_PATH = SKILL_DIR / "config" / "law_index.yaml"
-CHECKLISTS_DIR = SKILL_DIR / "config" / "checklists"
-DATA_RAW_DIR = SKILL_DIR / "data" / "raw"
-DATA_PARSED_DIR = SKILL_DIR / "data" / "parsed"
+# 중앙화된 경로 상수 사용 (common/paths.py)
+from common.paths import (
+    CONFIG_PATH,
+    LAW_INDEX_PATH,
+    CHECKLISTS_DIR,
+    DATA_RAW_DIR,
+    DATA_PARSED_DIR,
+    API_BASE_URL,
+)
 
-# API 기본 URL
-BASE_URL = "http://www.law.go.kr/DRF"
+# API 기본 URL (common/paths.py에서 가져옴)
+BASE_URL = API_BASE_URL
 
 # 환경변수 이름
 ENV_OC_CODE = "BEOPSUNY_OC_CODE"
