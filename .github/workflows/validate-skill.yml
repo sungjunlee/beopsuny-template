@@ -1,0 +1,36 @@
+name: Validate Agent Skill
+
+on:
+  pull_request:
+    paths:
+      - '.claude/skills/beopsuny/**'
+  push:
+    branches: [main]
+    paths:
+      - '.claude/skills/beopsuny/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install skills-ref
+        run: pip install skills-ref
+
+      - name: Validate Skill
+        run: |
+          echo "Validating beopsuny skill..."
+          skills-ref validate .claude/skills/beopsuny
+          echo "✓ Skill validation passed"
+
+      - name: Read Properties
+        run: |
+          echo "Skill properties:"
+          skills-ref read-properties .claude/skills/beopsuny
