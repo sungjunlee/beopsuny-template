@@ -31,6 +31,14 @@ maintenance:
   note: "분기별 법령 개정 확인 권장"
   changelog:
     - date: "2025-12-27"
+      changes: |
+        v1.1 - 법조문 검증 및 신규 항목 추가
+        - 오류 수정: 사업보고서(제159조), 부가가치세 확정신고(제49조)
+        - 정기주주총회 법조문 병기(제365조, 제354조)
+        - 개인정보보호 교육 과태료 설명 보완
+        - 신규 추가: 장애인 인식개선 교육, 퇴직연금 교육, 위험성평가
+        - 신규 추가: 법인지방소득세, 부가가치세 예정신고
+    - date: "2025-12-27"
       changes: "초기 버전 생성 (15개 의무)"
 
 # ─────────────────────────────────────────────────────────
@@ -67,7 +75,7 @@ annual:
   - id: "cal-annual-01"
     name: "정기 주주총회"
     description: "결산기 후 3개월 내 개최"
-    law: "상법 제365조"
+    law: "상법 제365조, 제354조"
     law_id: null  # TODO: 법령 ID 추가
     deadline_month: 3
     deadline_day: 31
@@ -129,7 +137,7 @@ annual:
   - id: "cal-annual-04"
     name: "사업보고서 제출"
     description: "사업연도 종료 후 90일 내"
-    law: "자본시장법 제160조"
+    law: "자본시장법 제159조"
     law_id: null
     deadline_month: 3
     deadline_day: 31
@@ -172,7 +180,7 @@ annual:
     deadline_month: 12
     deadline_day: 31
     deadline_rule: "매년 1회 이상"
-    penalty: "시정명령, 과태료"
+    penalty: "직접 과태료 없음 (관리적 의무, 유출 시 과징금 최대 5억원)"
     applies_to:
       company_type: ["all"]
       employee_count: ["any"]
@@ -181,6 +189,7 @@ annual:
     notes: |
       - 개인정보취급자 대상
       - 교육 이수 기록 보관
+      - 교육 미실시 자체 과태료는 없으나, 유출 사고 시 관리 소홀로 불리
 
   # 7. 장애인 고용부담금 신고
   - id: "cal-annual-07"
@@ -221,6 +230,86 @@ annual:
       - 정기교육: 사무직 매분기 3시간, 그 외 6시간
       - 채용 시/작업내용변경 시 교육 필수
 
+  # 9. 직장 내 장애인 인식개선 교육 (신규 추가)
+  - id: "cal-annual-09"
+    name: "직장 내 장애인 인식개선 교육"
+    description: "연 1회 이상, 1시간 이상"
+    law: "장애인고용촉진 및 직업재활법 제5조의2"
+    law_id: null
+    deadline_month: 12
+    deadline_day: 31
+    deadline_rule: "매년 1회, 1시간 이상"
+    penalty: "과태료 300만원 이하"
+    applies_to:
+      company_type: ["all"]
+      employee_count: ["any"]
+    reminder_days: [60, 30]
+    priority: "high"
+    notes: |
+      - 모든 사업장 의무 (사업주 및 전 근로자)
+      - 50인 미만: 교육자료 배포/게시로 대체 가능
+      - 교육 자료 3년 보관 의무
+
+  # 10. 퇴직연금 교육 (신규 추가)
+  - id: "cal-annual-10"
+    name: "퇴직연금 교육"
+    description: "연 1회 이상 가입자 대상"
+    law: "근로자퇴직급여보장법 제32조"
+    law_id: null
+    deadline_month: 12
+    deadline_day: 31
+    deadline_rule: "매년 1회 이상"
+    penalty: "과태료 1,000만원 이하"
+    applies_to:
+      company_type: ["all"]
+      employee_count: ["any"]
+    reminder_days: [60, 30]
+    priority: "critical"
+    notes: |
+      - 퇴직연금제도(DB/DC) 가입 사업장만 해당
+      - 교육 방법: 서면, 전자우편, 집합교육, 온라인 중 택1
+      - 법정의무교육 중 과태료 최고액
+
+  # 11. 위험성평가 실시 (신규 추가)
+  - id: "cal-annual-11"
+    name: "위험성평가 실시"
+    description: "연 1회 정기평가, 수시평가"
+    law: "산업안전보건법 제36조"
+    law_id: null
+    deadline_month: 12
+    deadline_day: 31
+    deadline_rule: "최초평가 후 매년 정기평가"
+    penalty: "과태료 500만원 이하"
+    applies_to:
+      company_type: ["all"]
+      employee_count: ["any"]
+    reminder_days: [60, 30]
+    priority: "high"
+    notes: |
+      - 상시 1인 이상 모든 사업장 의무
+      - 유해위험요인 파악 및 개선대책 수립
+      - 근로자 참여 의무, 결과 3년 보존
+
+  # 12. 법인지방소득세 신고 (신규 추가)
+  - id: "cal-annual-12"
+    name: "법인지방소득세 신고/납부"
+    description: "사업연도 종료 후 4개월 내"
+    law: "지방세법 제103조의23"
+    law_id: null
+    deadline_month: 4
+    deadline_day: 30
+    deadline_rule: "사업연도 종료 후 4개월 내"
+    penalty: "가산세"
+    applies_to:
+      company_type: ["all"]
+      employee_count: ["any"]
+    reminder_days: [30, 14, 7]
+    priority: "critical"
+    notes: |
+      - 법인세(국세)와 별도로 신고 필수
+      - 위택스(www.wetax.go.kr) 전자신고
+      - 사업장 소재지 관할 지자체에 납부
+
 # ─────────────────────────────────────────────────────────
 # 분기별 의무 (Quarterly)
 # ─────────────────────────────────────────────────────────
@@ -229,7 +318,7 @@ quarterly:
   - id: "cal-quarterly-01"
     name: "부가가치세 확정신고"
     description: "과세기간 종료 후 25일 내"
-    law: "부가가치세법 제48조"
+    law: "부가가치세법 제49조"
     law_id: null
     deadline_days_after_quarter: 25
     deadline_rule: "과세기간 종료 후 25일 내"
@@ -241,7 +330,6 @@ quarterly:
     priority: "critical"
     notes: |
       - 1기 확정: 7/25, 2기 확정: 1/25
-      - 예정신고: 4/25, 10/25 (선택)
     occurrences:
       - month: 1
         day: 25
@@ -250,8 +338,34 @@ quarterly:
         day: 25
         label: "1기 확정신고"
 
-  # 2. 분기보고서 제출 (상장사)
+  # 2. 부가가치세 예정신고 (신규 추가)
   - id: "cal-quarterly-02"
+    name: "부가가치세 예정신고"
+    description: "예정신고기간 종료 후 25일 내 (법인 의무)"
+    law: "부가가치세법 제48조"
+    law_id: null
+    deadline_days_after_quarter: 25
+    deadline_rule: "예정신고기간 종료 후 25일 내"
+    penalty: "가산세"
+    applies_to:
+      company_type: ["corp"]
+      employee_count: ["any"]
+    reminder_days: [14, 7]
+    priority: "critical"
+    notes: |
+      - 법인사업자 의무 (개인사업자는 예정고지)
+      - 1기 예정: 4/25 (1-3월분), 2기 예정: 10/25 (7-9월분)
+      - 직전 과세기간 1.5억 미만 소규모 법인은 예정고지로 대체 가능
+    occurrences:
+      - month: 4
+        day: 25
+        label: "1기 예정신고"
+      - month: 10
+        day: 25
+        label: "2기 예정신고"
+
+  # 3. 분기보고서 제출 (상장사)
+  - id: "cal-quarterly-03"
     name: "분기보고서 제출"
     description: "분기 종료 후 45일 내"
     law: "자본시장법 제160조"
