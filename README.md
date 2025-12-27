@@ -37,6 +37,7 @@ Claude Code, OpenAI Codex, Gemini CLI, Cursor 등에서 **국가법령정보센�
 | **행정규칙** | 고시, 훈령, 예규 (실무 핵심!) | ~23,500 |
 | **판례 검색** | 대법원/하급심 판결 | ~330,000 |
 | **체크리스트** | 스타트업 설립, 개인정보, 공정거래 등 | 7종 |
+| **법정 의무 캘린더** | 주총, 법인세, 4대보험 등 D-day | 15개 의무 |
 | **국회 의안** | 발의 법안, 개정안 추적 | 실시간 |
 | **계약서 검토** | 조항-법령 매핑, 영한 법률용어 | 30조항/100용어 |
 
@@ -79,9 +80,45 @@ python scripts/fetch_law.py cases "손해배상"
 
 # 체크리스트
 python scripts/fetch_law.py checklist show startup
+
+# 법정 의무 캘린더
+python scripts/fetch_law.py calendar upcoming --days 30
 ```
 
-> 📖 **상세 가이드**: [사용자 가이드](.claude/skills/beopsuny/docs/user_guide.md)
+> 📖 **상세 가이드**: [사용자 가이드](.claude/skills/beopsuny/references/user_guide.md)
+
+---
+
+## 📅 법정 의무 캘린더
+
+기업이 반드시 지켜야 할 법정 의무 일정을 D-day로 관리합니다.
+
+```bash
+# 30일 내 마감 의무 확인
+python scripts/fetch_law.py calendar upcoming --days 30
+
+# 상장사만 필터링
+python scripts/fetch_law.py calendar upcoming --filter listed
+
+# 전체 의무 목록
+python scripts/fetch_law.py calendar list
+```
+
+### 📱 Google Calendar / Outlook 구독
+
+iCal 파일을 캘린더 앱에서 구독하면 **자동 알림**을 받을 수 있습니다:
+
+1. 아래 URL을 복사:
+   ```
+   https://raw.githubusercontent.com/sungjunlee/beopsuny-template/main/.claude/skills/beopsuny/assets/compliance.ics
+   ```
+
+2. 캘린더 앱에서 추가:
+   - **Google Calendar**: 설정 → 캘린더 추가 → URL로 추가
+   - **Outlook**: 캘린더 추가 → 인터넷에서 구독
+   - **Apple Calendar**: 파일 → 새 캘린더 구독
+
+> 💡 **포함 의무**: 정기주총, 법인세, 부가세, 4대보험, 외부감사, 성희롱예방교육 등 15개
 
 ---
 
@@ -89,8 +126,8 @@ python scripts/fetch_law.py checklist show startup
 
 | 문서 | 내용 |
 |------|------|
-| [📖 사용자 가이드](.claude/skills/beopsuny/docs/user_guide.md) | 설치, 명령어 레퍼런스, 체크리스트, FAQ |
-| [📝 계약서 검토 가이드](.claude/skills/beopsuny/docs/contract_review_guide.md) | 계약서 검토 워크플로우 |
+| [📖 사용자 가이드](.claude/skills/beopsuny/references/user_guide.md) | 설치, 명령어 레퍼런스, 체크리스트, FAQ |
+| [📝 계약서 검토 가이드](.claude/skills/beopsuny/references/contract_review_guide.md) | 계약서 검토 워크플로우 |
 | [🧪 테스트 가이드](tests/README.md) | 111개 시나리오 테스트 |
 
 ---
