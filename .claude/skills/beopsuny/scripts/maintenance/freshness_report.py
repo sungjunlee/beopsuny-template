@@ -79,7 +79,7 @@ def collect_all_metadata() -> list:
             try:
                 meta = get_file_metadata(filepath)
                 metadata.append(meta)
-            except Exception as e:
+            except (yaml.YAMLError, OSError, UnicodeDecodeError) as e:
                 print(f"Warning: {filepath} 파싱 실패: {e}", file=sys.stderr)
 
     return metadata

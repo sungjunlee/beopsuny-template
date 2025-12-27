@@ -13,6 +13,11 @@ Usage:
 
 환경변수:
     BEOPSUNY_OC_CODE: law.go.kr API 인증 코드 (필수)
+
+Exit codes:
+    0: 모두 유효
+    1: 무효 조문 발견
+    2: API 오류 과반수 (결과 신뢰 불가)
 """
 
 import argparse
@@ -155,6 +160,10 @@ def api_request(endpoint: str, params: dict) -> Tuple[Optional[ET.Element], Opti
         return None, error_msg
     except TimeoutError:
         error_msg = "Timeout after 30s"
+        print(f"API Error: {error_msg}", file=sys.stderr)
+        return None, error_msg
+    except UnicodeDecodeError as e:
+        error_msg = f"Invalid encoding in API response: {e}"
         print(f"API Error: {error_msg}", file=sys.stderr)
         return None, error_msg
 
@@ -357,9 +366,20 @@ def main():
     else:
         print(format_text(results))
 
-    # 종료 코드: 무효 조문이 있으면 1
+    # 종료 코드 결정
+    # - 0: 모두 유효
+    # - 1: 무효 조문 발견
+    # - 2: API 오류가 과반수 (신뢰할 수 없는 결과)
     invalid_count = len([r for r in results if r.get("valid") is False])
-    sys.exit(1 if invalid_count > 0 else 0)
+    api_error_count = len([r for r in results if r.get("valid") is None and "API" in r.get("error", "")])
+
+    if results and api_error_count > len(results) * 0.5:
+        print(f"Error: API 오류 {api_error_count}/{len(results)}건 - 결과를 신뢰할 수 없음", file=sys.stderr)
+        sys.exit(2)
+    elif invalid_count > 0:
+        sys.exit(1)
+    else:
+        sys.exit(0)
 
 
 if __name__ == "__main__":

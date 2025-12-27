@@ -14,6 +14,11 @@ Usage:
 
 환경변수:
     BEOPSUNY_OC_CODE: law.go.kr API 인증 코드 (필수)
+
+Exit codes:
+    0: 성공, 개정 없음
+    1: 성공, 개정 감지됨
+    2: API 호출 실패
 """
 
 import argparse
@@ -101,9 +106,12 @@ def load_state():
 
 def save_state(state):
     """상태 파일 저장"""
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    with open(STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump(state, f, ensure_ascii=False, indent=2)
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        with open(STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+    except OSError as e:
+        print(f"Warning: 상태 파일 저장 실패: {e}", file=sys.stderr)
 
 
 def api_request(endpoint: str, params: dict) -> Tuple[Optional[ET.Element], Optional[str]]:
@@ -135,6 +143,10 @@ def api_request(endpoint: str, params: dict) -> Tuple[Optional[ET.Element], Opti
         return None, error_msg
     except TimeoutError:
         error_msg = f"Timeout after 30s for {endpoint}"
+        print(f"API Error: {error_msg}", file=sys.stderr)
+        return None, error_msg
+    except UnicodeDecodeError as e:
+        error_msg = f"Invalid encoding in API response: {e}"
         print(f"API Error: {error_msg}", file=sys.stderr)
         return None, error_msg
 

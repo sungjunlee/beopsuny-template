@@ -6,13 +6,13 @@
 
 Usage:
     python build_law_index.py              # 인덱스 생성 및 출력
+    python build_law_index.py --json       # JSON 형식으로 출력
     python build_law_index.py --save       # data/law_to_files.json으로 저장
     python build_law_index.py --lookup "개인정보보호법"  # 특정 법령 조회
 """
 
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 
@@ -27,13 +27,6 @@ DATA_DIR = SKILL_DIR / "data"
 
 # 인덱스 저장 경로
 INDEX_OUTPUT_PATH = DATA_DIR / "law_to_files.json"
-
-# 법령명 추출 패턴
-# "민법 제750조", "상법", "개인정보보호법 제28조" 등
-LAW_NAME_PATTERN = re.compile(
-    r'(?:법|령|규칙|규정)(?:\s|$|["\'])|'  # "법", "령" 등으로 끝나는 단어
-    r'([가-힣]+(?:법|령|규칙|규정))'  # 한글 + 법/령/규칙/규정
-)
 
 # 정규화된 법령명 목록 (law_index.yaml 기준)
 KNOWN_LAWS = None
@@ -50,8 +43,13 @@ def load_known_laws():
         KNOWN_LAWS = set()
         return KNOWN_LAWS
 
-    with open(law_index_path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
+    try:
+        with open(law_index_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+    except (yaml.YAMLError, OSError, UnicodeDecodeError) as e:
+        print(f"Warning: Cannot read {law_index_path}: {e}", file=sys.stderr)
+        KNOWN_LAWS = set()
+        return KNOWN_LAWS
 
     KNOWN_LAWS = set(data.get("major_laws", {}).keys())
     return KNOWN_LAWS
@@ -94,8 +92,12 @@ def extract_laws_from_yaml(filepath: Path) -> dict:
             ...
         }
     """
-    with open(filepath, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+    except (yaml.YAMLError, OSError, UnicodeDecodeError) as e:
+        print(f"Warning: Cannot read {filepath}: {e}", file=sys.stderr)
+        return {}
 
     laws = {}
     known = load_known_laws()
@@ -248,11 +250,15 @@ def main():
 
     if args.save:
         # 파일로 저장
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        with open(INDEX_OUTPUT_PATH, "w", encoding="utf-8") as f:
-            json.dump(index, f, ensure_ascii=False, indent=2)
-        print(f"✅ 인덱스 저장됨: {INDEX_OUTPUT_PATH}")
-        print(f"   총 {len(index)}개 법령 인덱싱")
+        try:
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            with open(INDEX_OUTPUT_PATH, "w", encoding="utf-8") as f:
+                json.dump(index, f, ensure_ascii=False, indent=2)
+            print(f"✅ 인덱스 저장됨: {INDEX_OUTPUT_PATH}")
+            print(f"   총 {len(index)}개 법령 인덱싱")
+        except OSError as e:
+            print(f"Error: 인덱스 저장 실패: {e}", file=sys.stderr)
+            sys.exit(2)
         return
 
     # 기본: 인덱스 출력
