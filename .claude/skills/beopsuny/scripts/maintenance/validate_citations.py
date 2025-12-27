@@ -22,10 +22,12 @@ import random
 import re
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import Optional, Tuple
 
 import yaml
 
@@ -124,8 +126,13 @@ def deduplicate_citations(citations: list) -> list:
     return unique
 
 
-def api_request(endpoint: str, params: dict):
-    """law.go.kr API 호출"""
+def api_request(endpoint: str, params: dict) -> Tuple[Optional[ET.Element], Optional[str]]:
+    """law.go.kr API 호출
+
+    Returns:
+        (XML Element, None) on success
+        (None, error_message) on failure
+    """
     query = urllib.parse.urlencode(params)
     url = f"{API_BASE_URL}/{endpoint}?{query}"
 
@@ -133,9 +140,23 @@ def api_request(endpoint: str, params: dict):
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=30) as response:
             content = response.read().decode("utf-8")
-            return ET.fromstring(content)
-    except Exception as e:
-        return None
+            return ET.fromstring(content), None
+    except urllib.error.HTTPError as e:
+        error_msg = f"HTTP {e.code} {e.reason}"
+        print(f"API Error: {error_msg}", file=sys.stderr)
+        return None, error_msg
+    except urllib.error.URLError as e:
+        error_msg = f"Connection failed: {e.reason}"
+        print(f"API Error: {error_msg}", file=sys.stderr)
+        return None, error_msg
+    except ET.ParseError as e:
+        error_msg = f"XML parse error: {e}"
+        print(f"API Error: {error_msg}", file=sys.stderr)
+        return None, error_msg
+    except TimeoutError:
+        error_msg = "Timeout after 30s"
+        print(f"API Error: {error_msg}", file=sys.stderr)
+        return None, error_msg
 
 
 def validate_citation(law_name: str, law_id: str, article: str, oc_code: str) -> dict:
@@ -147,9 +168,9 @@ def validate_citation(law_name: str, law_id: str, article: str, oc_code: str) ->
         "ID": law_id,
     }
 
-    root = api_request("lawService.do", params)
+    root, error = api_request("lawService.do", params)
     if root is None:
-        return {"valid": None, "error": "API 호출 실패"}
+        return {"valid": None, "error": error or "API 호출 실패"}
 
     # 조문 번호 추출 (예: "제750조" → "750")
     article_match = re.match(r"제(\d+)조(?:의(\d+))?", article)

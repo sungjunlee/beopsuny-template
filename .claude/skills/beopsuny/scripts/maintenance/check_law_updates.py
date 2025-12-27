@@ -20,11 +20,13 @@ import argparse
 import json
 import os
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Optional, Tuple
 
 import yaml
 
@@ -71,8 +73,14 @@ def load_law_index():
 def load_reverse_index():
     """역 인덱스 로드 (없으면 생성)"""
     if not LAW_TO_FILES_PATH.exists():
-        # 역 인덱스 생성
-        from build_law_index import build_reverse_index
+        # 역 인덱스 생성 - 같은 디렉토리의 모듈 import
+        try:
+            from maintenance.build_law_index import build_reverse_index
+        except ImportError:
+            # 직접 실행 시 상대 경로로 시도
+            sys.path.insert(0, str(SCRIPT_DIR))
+            from build_law_index import build_reverse_index
+
         index = build_reverse_index()
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         with open(LAW_TO_FILES_PATH, "w", encoding="utf-8") as f:
@@ -98,8 +106,13 @@ def save_state(state):
         json.dump(state, f, ensure_ascii=False, indent=2)
 
 
-def api_request(endpoint: str, params: dict):
-    """law.go.kr API 호출"""
+def api_request(endpoint: str, params: dict) -> Tuple[Optional[ET.Element], Optional[str]]:
+    """law.go.kr API 호출
+
+    Returns:
+        (XML Element, None) on success
+        (None, error_message) on failure
+    """
     query = urllib.parse.urlencode(params)
     url = f"{API_BASE_URL}/{endpoint}?{query}"
 
@@ -107,13 +120,26 @@ def api_request(endpoint: str, params: dict):
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=30) as response:
             content = response.read().decode("utf-8")
-            return ET.fromstring(content)
-    except Exception as e:
-        print(f"API Error: {e}", file=sys.stderr)
-        return None
+            return ET.fromstring(content), None
+    except urllib.error.HTTPError as e:
+        error_msg = f"HTTP {e.code} {e.reason} for {endpoint}"
+        print(f"API Error: {error_msg}", file=sys.stderr)
+        return None, error_msg
+    except urllib.error.URLError as e:
+        error_msg = f"Connection failed: {e.reason} for {endpoint}"
+        print(f"API Error: {error_msg}", file=sys.stderr)
+        return None, error_msg
+    except ET.ParseError as e:
+        error_msg = f"XML parse error: {e} for {endpoint}"
+        print(f"API Error: {error_msg}", file=sys.stderr)
+        return None, error_msg
+    except TimeoutError:
+        error_msg = f"Timeout after 30s for {endpoint}"
+        print(f"API Error: {error_msg}", file=sys.stderr)
+        return None, error_msg
 
 
-def get_law_info(law_id: str, oc_code: str) -> dict:
+def get_law_info(law_id: str, oc_code: str) -> Optional[dict]:
     """법령 ID로 기본 정보 조회"""
     params = {
         "OC": oc_code,
@@ -122,7 +148,7 @@ def get_law_info(law_id: str, oc_code: str) -> dict:
         "ID": law_id,
     }
 
-    root = api_request("lawService.do", params)
+    root, error = api_request("lawService.do", params)
     if root is None:
         return None
 
@@ -134,8 +160,14 @@ def get_law_info(law_id: str, oc_code: str) -> dict:
     }
 
 
-def get_recent_amendments(oc_code: str, from_date: str, to_date: str = None) -> list:
-    """최근 개정 법령 목록 조회"""
+def get_recent_amendments(oc_code: str, from_date: str, to_date: str = None) -> Tuple[list, bool]:
+    """최근 개정 법령 목록 조회
+
+    Returns:
+        (results_list, success_flag)
+        - success=True: API 호출 성공 (빈 리스트도 성공)
+        - success=False: API 호출 실패
+    """
     if to_date is None:
         to_date = datetime.now().strftime("%Y%m%d")
 
@@ -148,9 +180,9 @@ def get_recent_amendments(oc_code: str, from_date: str, to_date: str = None) -> 
         "sort": "efdes",
     }
 
-    root = api_request("lawSearch.do", params)
+    root, error = api_request("lawSearch.do", params)
     if root is None:
-        return []
+        return [], False  # API 실패
 
     results = []
     for item in root.findall(".//law"):
@@ -162,13 +194,19 @@ def get_recent_amendments(oc_code: str, from_date: str, to_date: str = None) -> 
             "revision_type": item.findtext("제개정구분명", ""),
         })
 
-    return results
+    return results, True  # API 성공
 
 
-def check_amendments(since_date: str, major_laws: dict, reverse_index: dict, oc_code: str) -> list:
-    """개정된 법령 확인 및 영향 분석"""
+def check_amendments(since_date: str, major_laws: dict, reverse_index: dict, oc_code: str) -> Tuple[list, bool]:
+    """개정된 법령 확인 및 영향 분석
+
+    Returns:
+        (affected_list, success_flag)
+    """
     # 최근 개정 법령 조회
-    recent = get_recent_amendments(oc_code, since_date)
+    recent, success = get_recent_amendments(oc_code, since_date)
+    if not success:
+        return [], False
 
     # 주요 법령 이름 목록
     major_law_names = set(major_laws.keys())
@@ -200,7 +238,7 @@ def check_amendments(since_date: str, major_laws: dict, reverse_index: dict, oc_
                 "affected_files": files,
             })
 
-    return affected
+    return affected, True
 
 
 def format_markdown(affected: list, since_date: str) -> str:
@@ -314,7 +352,12 @@ def main():
 
     # 개정 확인
     print(f"Checking amendments since {since_date}...", file=sys.stderr)
-    affected = check_amendments(since_date, major_laws, reverse_index, oc_code)
+    affected, success = check_amendments(since_date, major_laws, reverse_index, oc_code)
+
+    # API 실패 시 exit code 2
+    if not success:
+        print("Error: API 호출 실패. 나중에 다시 시도하세요.", file=sys.stderr)
+        sys.exit(2)
 
     # 출력
     if args.json:

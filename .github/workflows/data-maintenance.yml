@@ -7,20 +7,27 @@
 # 실행 주기:
 #   - 법령 개정 감지: 매월 1일 09:00 KST
 #   - 신선도 리포트: 매주 월요일 09:00 KST
-#   - 조문 검증: 매 분기 첫날 (1/1, 4/1, 7/1, 10/1)
+#   - 조문 검증: 매 분기 첫날 (1/1, 4/1, 7/1, 10/1) 09:00 KST
 #
 # 필요한 Secrets:
 #   - FAMILY_OC_CODE: law.go.kr API 인증 코드 (기존 family-release와 공유)
+#
+# Exit codes:
+#   - 0: 성공, 변경 없음
+#   - 1: 성공, 변경 감지됨 (Issue 생성 필요)
+#   - 2: 오류 발생
 # ============================================================
 
 name: Data Maintenance
 
 on:
   schedule:
-    # 매월 1일 00:00 UTC (KST 09:00)
+    # 매월 1일 00:00 UTC (KST 09:00) - 법령 개정 감지
     - cron: '0 0 1 * *'
-    # 매주 월요일 00:00 UTC (KST 09:00)
+    # 매주 월요일 00:00 UTC (KST 09:00) - 신선도 리포트
     - cron: '0 0 * * 1'
+    # 분기 첫날 00:00 UTC (KST 09:00) - 조문 검증 (1/1, 4/1, 7/1, 10/1)
+    - cron: '0 0 1 1,4,7,10 *'
   workflow_dispatch:
     inputs:
       task:
@@ -44,7 +51,12 @@ jobs:
   check-law-updates:
     name: Check Law Amendments
     runs-on: ubuntu-latest
-    if: github.event.schedule == '0 0 1 * *' || github.event.inputs.task == 'all' || github.event.inputs.task == 'check-law-updates'
+    # 매월 1일 스케줄 또는 수동 실행
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.task == 'all' || github.event.inputs.task == 'check-law-updates')
+      ||
+      github.event_name == 'schedule' && github.event.schedule == '0 0 1 * *'
 
     steps:
       - name: Checkout
@@ -68,20 +80,28 @@ jobs:
         env:
           BEOPSUNY_OC_CODE: ${{ secrets.FAMILY_OC_CODE }}
         run: |
-          # 마지막 확인일 이후 개정 감지
-          python maintenance/check_law_updates.py --days 35 --markdown > report.md 2>&1 || true
+          set +e  # 에러 발생해도 계속 진행
+          python maintenance/check_law_updates.py --days 35 --markdown > report.md 2>&1
+          exit_code=$?
+          set -e
 
-          # 결과를 GitHub output으로 전달
-          if [ -s report.md ]; then
+          # Exit code 해석
+          # 0: 변경 없음
+          # 1: 변경 감지됨
+          # 2+: 오류 발생
+          if [ $exit_code -eq 0 ]; then
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+          elif [ $exit_code -eq 1 ]; then
             echo "has_updates=true" >> $GITHUB_OUTPUT
-            # 멀티라인 출력
             {
               echo 'report<<EOF'
               cat report.md
               echo 'EOF'
             } >> $GITHUB_OUTPUT
           else
-            echo "has_updates=false" >> $GITHUB_OUTPUT
+            echo "::error::Script failed with exit code $exit_code"
+            cat report.md
+            exit $exit_code
           fi
 
       - name: Create Issue if amendments found
@@ -132,7 +152,12 @@ jobs:
   freshness-report:
     name: Data Freshness Report
     runs-on: ubuntu-latest
-    if: github.event.schedule == '0 0 * * 1' || github.event.inputs.task == 'all' || github.event.inputs.task == 'freshness-report'
+    # 매주 월요일 스케줄 또는 수동 실행
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.task == 'all' || github.event.inputs.task == 'freshness-report')
+      ||
+      github.event_name == 'schedule' && github.event.schedule == '0 0 * * 1'
 
     steps:
       - name: Checkout
@@ -150,10 +175,18 @@ jobs:
         id: report
         working-directory: ${{ env.SCRIPTS_DIR }}
         run: |
-          python maintenance/freshness_report.py --markdown > report.md 2>&1 || true
+          set +e
+          python maintenance/freshness_report.py --markdown > report.md 2>&1
+          exit_code=$?
+          set -e
 
-          # 기한 초과 파일 확인
-          if python maintenance/freshness_report.py --overdue 2>/dev/null | grep -q "일 초과"; then
+          # Exit code 해석
+          # 0: 기한 초과 없음
+          # 1: 기한 초과 파일 있음
+          # 2+: 오류 발생
+          if [ $exit_code -eq 0 ]; then
+            echo "has_overdue=false" >> $GITHUB_OUTPUT
+          elif [ $exit_code -eq 1 ]; then
             echo "has_overdue=true" >> $GITHUB_OUTPUT
             {
               echo 'report<<EOF'
@@ -161,7 +194,9 @@ jobs:
               echo 'EOF'
             } >> $GITHUB_OUTPUT
           else
-            echo "has_overdue=false" >> $GITHUB_OUTPUT
+            echo "::error::Script failed with exit code $exit_code"
+            cat report.md
+            exit $exit_code
           fi
 
       - name: Create Issue if overdue files found
@@ -203,15 +238,16 @@ jobs:
             }
 
   # ─────────────────────────────────────────────────────────
-  # 조문 검증 (분기별)
+  # 조문 검증 (분기별: 1/1, 4/1, 7/1, 10/1)
   # ─────────────────────────────────────────────────────────
   validate-citations:
     name: Validate Citations
     runs-on: ubuntu-latest
-    # 분기 첫 달의 1일에만 실행 (1월, 4월, 7월, 10월)
+    # 분기 첫날 스케줄 또는 수동 실행
     if: |
-      (github.event.schedule == '0 0 1 * *' && contains('1,4,7,10', format('{0}', github.run_number))) ||
-      github.event.inputs.task == 'validate-citations'
+      github.event_name == 'workflow_dispatch' && github.event.inputs.task == 'validate-citations'
+      ||
+      github.event_name == 'schedule' && github.event.schedule == '0 0 1 1,4,7,10 *'
 
     steps:
       - name: Checkout
@@ -231,11 +267,19 @@ jobs:
         env:
           BEOPSUNY_OC_CODE: ${{ secrets.FAMILY_OC_CODE }}
         run: |
+          set +e
           # 샘플 검증 (API 호출 제한 고려)
-          python maintenance/validate_citations.py --sample 20 --markdown > report.md 2>&1 || true
+          python maintenance/validate_citations.py --sample 20 --markdown > report.md 2>&1
+          exit_code=$?
+          set -e
 
-          # 무효 조문 확인
-          if grep -q "❌ 무효" report.md; then
+          # Exit code 해석
+          # 0: 모두 유효
+          # 1: 무효 조문 발견
+          # 2+: 오류 발생
+          if [ $exit_code -eq 0 ]; then
+            echo "has_invalid=false" >> $GITHUB_OUTPUT
+          elif [ $exit_code -eq 1 ]; then
             echo "has_invalid=true" >> $GITHUB_OUTPUT
             {
               echo 'report<<EOF'
@@ -243,7 +287,9 @@ jobs:
               echo 'EOF'
             } >> $GITHUB_OUTPUT
           else
-            echo "has_invalid=false" >> $GITHUB_OUTPUT
+            echo "::error::Script failed with exit code $exit_code"
+            cat report.md
+            exit $exit_code
           fi
 
       - name: Create Issue if invalid citations found
