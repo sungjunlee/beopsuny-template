@@ -139,34 +139,38 @@ jobs:
           secure: true
           username: ${{ secrets.FAMILY_MAIL_USER }}
           password: ${{ secrets.FAMILY_MAIL_APP_PASSWORD }}
-          subject: "법순이 스킬 ${{ env.VERSION }}"
+          subject: "🏛️ 법순이 스킬 ${{ env.VERSION }}"
           to: ${{ secrets.FAMILY_EMAILS }}
           from: ${{ secrets.FAMILY_MAIL_USER }}
           attachments: beopsuny-skill-${{ env.VERSION }}.zip
+          convert_markdown: true
           body: |
-            법순이(Beopsuny) 스킬 ${{ env.VERSION }} 배포
-            ================================================
+            # 법순이(Beopsuny) 스킬 ${{ env.VERSION }}
 
             ${{ env.RELEASE_NOTES }}
 
-            설치 방법
-            ---------
+            ---
+
+            ## 📦 설치 방법
+
             1. 첨부된 ZIP 파일 다운로드
             2. 압축 해제
-            3. Claude Desktop → Settings → Skills → Import
-            4. beopsuny 폴더 선택
+            3. Claude Desktop → **Settings** → **Skills** → **Import**
+            4. `beopsuny` 폴더 선택
 
-            사용법
-            ------
-            - 법령 검색: "민법 제750조 알려줘"
-            - 판례 검색: "손해배상 관련 판례 찾아줘"
-            - 체크리스트: "스타트업 설립 체크리스트 보여줘"
+            ## 💡 사용법
 
-            문의: GitHub Issues 또는 직접 연락
+            | 기능 | 예시 |
+            |------|------|
+            | 법령 검색 | "민법 제750조 알려줘" |
+            | 판례 검색 | "손해배상 관련 판례 찾아줘" |
+            | 체크리스트 | "스타트업 설립 체크리스트 보여줘" |
 
             ---
-            자동 생성: GitHub Actions
-            커밋: ${{ github.sha }}
+
+            *문의: GitHub Issues 또는 직접 연락*
+
+            > 자동 생성: GitHub Actions | 커밋: `${{ github.sha }}`
 
       # 보안: 작업 후 민감 파일 정리
       - name: Cleanup sensitive files
