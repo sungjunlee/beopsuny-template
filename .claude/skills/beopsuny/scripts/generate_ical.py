@@ -338,9 +338,19 @@ def main():
         print(ical_content)
     else:
         output_path = Path(args.output)
+
+        # 부모 디렉토리가 없으면 생성
         try:
-            # 부모 디렉토리가 없으면 생성
             output_path.parent.mkdir(parents=True, exist_ok=True)
+        except PermissionError:
+            print(f"ERROR: 디렉토리 생성 권한이 없습니다: {output_path.parent}", file=sys.stderr)
+            sys.exit(1)
+        except OSError as e:
+            print(f"ERROR: 디렉토리 생성 실패: {e}", file=sys.stderr)
+            sys.exit(1)
+
+        # 파일 쓰기
+        try:
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(ical_content)
         except PermissionError:

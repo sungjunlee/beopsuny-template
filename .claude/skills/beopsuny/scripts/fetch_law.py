@@ -1906,17 +1906,18 @@ def get_upcoming_obligations(days: int = 30, filter_type: str = None):
         filter_type: 필터 (all, listed, large, sme, corp)
 
     Returns:
-        list of obligations with calculated deadlines
+        tuple: (list of obligations, skipped_count)
     """
     data = load_calendar()
     if not data:
-        return []
+        return [], 0
 
     today = datetime.now()
     current_year = today.year
     current_month = today.month
 
     upcoming = []
+    skipped_count = 0
 
     # 연간 의무 처리
     for item in data.get('annual', []):
@@ -1933,6 +1934,7 @@ def get_upcoming_obligations(days: int = 30, filter_type: str = None):
             except ValueError as e:
                 print(f"WARNING: 날짜 오류로 '{item.get('name')}' 건너뜀 ({deadline_month}/{deadline_day}): {e}",
                       file=sys.stderr)
+                skipped_count += 1
                 continue
 
             days_until = (deadline - today).days
@@ -1970,6 +1972,7 @@ def get_upcoming_obligations(days: int = 30, filter_type: str = None):
                 except ValueError as e:
                     print(f"WARNING: 날짜 오류로 '{item.get('name')}' 건너뜀 ({occ_month}/{occ_day}): {e}",
                           file=sys.stderr)
+                    skipped_count += 1
                     continue
 
                 days_until = (deadline - today).days
@@ -2038,7 +2041,7 @@ def get_upcoming_obligations(days: int = 30, filter_type: str = None):
     # 마감일 순 정렬
     upcoming.sort(key=lambda x: x['days_until'])
 
-    return upcoming
+    return upcoming, skipped_count
 
 
 def show_calendar(days: int = 30, filter_type: str = None, output_format: str = 'text'):
@@ -2047,16 +2050,19 @@ def show_calendar(days: int = 30, filter_type: str = None, output_format: str = 
     Args:
         days: 앞으로 N일 이내의 의무 표시
         filter_type: 회사 유형 필터
-        output_format: 출력 형식 (text, json, markdown)
+        output_format: 출력 형식 (text, json)
     """
     data = load_calendar()
     if not data:
         return
 
-    upcoming = get_upcoming_obligations(days, filter_type)
+    upcoming, skipped_count = get_upcoming_obligations(days, filter_type)
 
     if output_format == 'json':
-        print(json.dumps({'upcoming': upcoming, 'total': len(upcoming)}, ensure_ascii=False, indent=2))
+        result = {'upcoming': upcoming, 'total': len(upcoming)}
+        if skipped_count > 0:
+            result['skipped_count'] = skipped_count
+        print(json.dumps(result, ensure_ascii=False, indent=2))
         return
 
     # 헤더
@@ -2091,6 +2097,10 @@ def show_calendar(days: int = 30, filter_type: str = None, output_format: str = 
 
     print("\n" + "=" * 60)
     print(f"총 {len(upcoming)}건")
+
+    # 건너뛴 항목 경고
+    if skipped_count > 0:
+        print(f"\n⚠️  WARNING: {skipped_count}건의 의무가 데이터 오류로 건너뛰어졌습니다.", file=sys.stderr)
 
     # 면책 고지
     disclaimer = data.get('disclaimer', '')
