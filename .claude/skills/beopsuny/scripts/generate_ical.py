@@ -6,12 +6,12 @@ iCal Generator for Compliance Calendar
 Google Calendar, Outlook 등에서 구독할 수 있게 합니다.
 
 Usage:
-    python generate_ical.py --output compliance.ics
-    python generate_ical.py --output ../assets/compliance.ics --year 2026
+    python generate_ical.py  # 기본: 프로젝트 루트/assets/compliance.ics
+    python generate_ical.py --output /path/to/compliance.ics --year 2026
 
 iCal 구독 방법:
     1. 생성된 .ics 파일을 GitHub에 커밋
-    2. raw URL 복사: https://raw.githubusercontent.com/.../compliance.ics
+    2. raw URL 복사: https://raw.githubusercontent.com/.../main/assets/compliance.ics
     3. Google Calendar: 설정 → 다른 캘린더 추가 → URL로 추가
     4. Outlook: 캘린더 추가 → 인터넷에서 구독
 """
@@ -27,7 +27,7 @@ from uuid import uuid4
 import yaml
 
 # 경로 상수
-from common.paths import CALENDAR_PATH, ASSETS_DIR
+from common.paths import CALENDAR_PATH, ASSETS_DIR, SKILL_DIR
 
 
 def load_calendar() -> Dict[str, Any]:
@@ -310,16 +310,20 @@ def generate_ical(year: int = None, include_monthly: bool = True) -> str:
 
 
 def main():
+    # 프로젝트 루트의 assets/ 디렉토리를 기본 출력 위치로 설정
+    project_root = SKILL_DIR.parent.parent.parent  # .claude/skills/beopsuny -> 루트
+    default_output = project_root / "assets" / "compliance.ics"
+
     parser = argparse.ArgumentParser(
         description='법정 의무 캘린더 iCal 생성기',
         epilog="""
 예시:
-  python generate_ical.py --output compliance.ics
-  python generate_ical.py --output ../assets/compliance.ics --year 2026 --no-monthly
+  python generate_ical.py  # 기본: 프로젝트 루트/assets/compliance.ics
+  python generate_ical.py --output /path/to/output.ics --year 2026 --no-monthly
 """
     )
-    parser.add_argument('--output', '-o', default='compliance.ics',
-                        help='출력 파일 경로 (기본: compliance.ics)')
+    parser.add_argument('--output', '-o', default=str(default_output),
+                        help=f'출력 파일 경로 (기본: {default_output})')
     parser.add_argument('--year', '-y', type=int, default=None,
                         help='대상 연도 (기본: 올해)')
     parser.add_argument('--no-monthly', action='store_true',

@@ -110,7 +110,7 @@ iCal 파일을 캘린더 앱에서 구독하면 **자동 알림**을 받을 수 
 
 1. 아래 URL을 복사:
    ```
-   https://raw.githubusercontent.com/sungjunlee/beopsuny-template/main/.claude/skills/beopsuny/assets/compliance.ics
+   https://raw.githubusercontent.com/sungjunlee/beopsuny-template/main/assets/compliance.ics
    ```
 
 2. 캘린더 앱에서 추가:
@@ -118,7 +118,7 @@ iCal 파일을 캘린더 앱에서 구독하면 **자동 알림**을 받을 수 
    - **Outlook**: 캘린더 추가 → 인터넷에서 구독
    - **Apple Calendar**: 파일 → 새 캘린더 구독
 
-> 💡 **포함 의무**: 정기주총, 법인세, 부가세, 4대보험, 외부감사, 성희롱예방교육 등 15개
+> 💡 **포함 의무**: 정기주총, 법인세, 법인지방소득세, 부가세, 4대보험, 외부감사, 성희롱예방교육, 장애인인식개선교육, 퇴직연금교육, 위험성평가 등 21개
 
 ---
 
