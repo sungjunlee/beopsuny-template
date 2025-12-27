@@ -67,17 +67,25 @@ def load_law_index():
     if not law_index_path.exists():
         return {}
 
-    with open(law_index_path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
+    try:
+        with open(law_index_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+    except (yaml.YAMLError, OSError, UnicodeDecodeError) as e:
+        print(f"Warning: {law_index_path} 읽기 실패: {e}", file=sys.stderr)
+        return {}
 
     return data.get("major_laws", {})
 
 
 def extract_citations_from_yaml(filepath: Path) -> list:
     """YAML 파일에서 조문 인용 추출"""
-    with open(filepath, "r", encoding="utf-8") as f:
-        content = f.read()
-        data = yaml.safe_load(content) or {}
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            content = f.read()
+            data = yaml.safe_load(content) or {}
+    except (yaml.YAMLError, OSError, UnicodeDecodeError) as e:
+        print(f"Warning: {filepath} 읽기 실패: {e}", file=sys.stderr)
+        return []
 
     citations = []
 

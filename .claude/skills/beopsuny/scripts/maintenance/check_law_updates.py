@@ -69,8 +69,12 @@ def load_law_index():
         print(f"Error: {law_index_path} not found", file=sys.stderr)
         sys.exit(1)
 
-    with open(law_index_path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
+    try:
+        with open(law_index_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+    except (yaml.YAMLError, OSError, UnicodeDecodeError) as e:
+        print(f"Error: {law_index_path} 읽기 실패: {e}", file=sys.stderr)
+        sys.exit(1)
 
     return data.get("major_laws", {})
 
@@ -87,20 +91,36 @@ def load_reverse_index():
             from build_law_index import build_reverse_index
 
         index = build_reverse_index()
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        with open(LAW_TO_FILES_PATH, "w", encoding="utf-8") as f:
-            json.dump(index, f, ensure_ascii=False, indent=2)
+        try:
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            with open(LAW_TO_FILES_PATH, "w", encoding="utf-8") as f:
+                json.dump(index, f, ensure_ascii=False, indent=2)
+        except OSError as e:
+            print(f"Warning: 역 인덱스 저장 실패: {e}", file=sys.stderr)
         return index
 
-    with open(LAW_TO_FILES_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(LAW_TO_FILES_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError) as e:
+        print(f"Warning: 역 인덱스 읽기 실패, 재생성: {e}", file=sys.stderr)
+        # 손상된 파일 무시하고 재생성
+        try:
+            from maintenance.build_law_index import build_reverse_index
+        except ImportError:
+            sys.path.insert(0, str(SCRIPT_DIR))
+            from build_law_index import build_reverse_index
+        return build_reverse_index()
 
 
 def load_state():
     """상태 파일 로드"""
     if STATE_FILE.exists():
-        with open(STATE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError) as e:
+            print(f"Warning: 상태 파일 읽기 실패: {e}", file=sys.stderr)
     return {}
 
 
