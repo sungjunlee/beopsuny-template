@@ -15,6 +15,10 @@ env/
 .claude/skills/beopsuny/data/parsed/*.md
 .claude/skills/beopsuny/data/bills/*.json
 
+# Maintenance runtime files
+.claude/skills/beopsuny/data/law_to_files.json
+.claude/skills/beopsuny/data/maintenance_state.json
+
 # But keep directory structure
 !.claude/skills/beopsuny/data/raw/.gitkeep
 !.claude/skills/beopsuny/data/parsed/.gitkeep

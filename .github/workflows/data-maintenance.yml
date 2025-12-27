@@ -1,0 +1,310 @@
+# ============================================================
+# 데이터 유지보수 자동화
+# Data Maintenance Automation
+# ============================================================
+# 법령 개정 감지 및 데이터 신선도 확인을 자동화합니다.
+#
+# 실행 주기:
+#   - 법령 개정 감지: 매월 1일 09:00 KST
+#   - 신선도 리포트: 매주 월요일 09:00 KST
+#   - 조문 검증: 매 분기 첫날 (1/1, 4/1, 7/1, 10/1) 09:00 KST
+#
+# 필요한 Secrets:
+#   - FAMILY_OC_CODE: law.go.kr API 인증 코드 (기존 family-release와 공유)
+#
+# Exit codes:
+#   - 0: 성공, 변경 없음
+#   - 1: 성공, 변경 감지됨 (Issue 생성 필요)
+#   - 2: 오류 발생
+# ============================================================
+
+name: Data Maintenance
+
+on:
+  schedule:
+    # 매월 1일 00:00 UTC (KST 09:00) - 법령 개정 감지
+    - cron: '0 0 1 * *'
+    # 매주 월요일 00:00 UTC (KST 09:00) - 신선도 리포트
+    - cron: '0 0 * * 1'
+    # 분기 첫날 00:00 UTC (KST 09:00) - 조문 검증 (1/1, 4/1, 7/1, 10/1)
+    - cron: '0 0 1 1,4,7,10 *'
+  workflow_dispatch:
+    inputs:
+      task:
+        description: '실행할 작업'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - check-law-updates
+          - freshness-report
+          - validate-citations
+
+env:
+  SCRIPTS_DIR: .claude/skills/beopsuny/scripts
+
+jobs:
+  # ─────────────────────────────────────────────────────────
+  # 법령 개정 감지 (매월 1일)
+  # ─────────────────────────────────────────────────────────
+  check-law-updates:
+    name: Check Law Amendments
+    runs-on: ubuntu-latest
+    # 매월 1일 스케줄 또는 수동 실행
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.task == 'all' || github.event.inputs.task == 'check-law-updates')
+      ||
+      github.event_name == 'schedule' && github.event.schedule == '0 0 1 * *'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Build reverse index
+        working-directory: ${{ env.SCRIPTS_DIR }}
+        run: python maintenance/build_law_index.py --save
+
+      - name: Check law amendments
+        id: check
+        working-directory: ${{ env.SCRIPTS_DIR }}
+        env:
+          BEOPSUNY_OC_CODE: ${{ secrets.FAMILY_OC_CODE }}
+        run: |
+          set +e  # 에러 발생해도 계속 진행
+          python maintenance/check_law_updates.py --days 35 --markdown > report.md 2>&1
+          exit_code=$?
+          set -e
+
+          # Exit code 해석
+          # 0: 변경 없음
+          # 1: 변경 감지됨
+          # 2+: 오류 발생
+          if [ $exit_code -eq 0 ]; then
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+          elif [ $exit_code -eq 1 ]; then
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+            {
+              echo 'report<<EOF'
+              cat report.md
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "::error::Script failed with exit code $exit_code"
+            cat report.md
+            exit $exit_code
+          fi
+
+      - name: Create Issue if amendments found
+        if: steps.check.outputs.has_updates == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🔔 법령 개정 감지 (${new Date().toISOString().slice(0, 7)})`;
+            const body = `${{ steps.check.outputs.report }}`;
+
+            // 기존 이슈 확인
+            const existingIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'maintenance,law-update',
+            });
+
+            const thisMonth = new Date().toISOString().slice(0, 7);
+            const existingThisMonth = existingIssues.data.find(issue =>
+              issue.title.includes(thisMonth)
+            );
+
+            if (existingThisMonth) {
+              // 기존 이슈 업데이트
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingThisMonth.number,
+                body: body,
+              });
+              console.log(`Updated existing issue #${existingThisMonth.number}`);
+            } else {
+              // 새 이슈 생성
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['maintenance', 'law-update'],
+              });
+              console.log('Created new issue');
+            }
+
+  # ─────────────────────────────────────────────────────────
+  # 신선도 리포트 (매주 월요일)
+  # ─────────────────────────────────────────────────────────
+  freshness-report:
+    name: Data Freshness Report
+    runs-on: ubuntu-latest
+    # 매주 월요일 스케줄 또는 수동 실행
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.task == 'all' || github.event.inputs.task == 'freshness-report')
+      ||
+      github.event_name == 'schedule' && github.event.schedule == '0 0 * * 1'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Generate freshness report
+        id: report
+        working-directory: ${{ env.SCRIPTS_DIR }}
+        run: |
+          set +e
+          python maintenance/freshness_report.py --markdown > report.md 2>&1
+          exit_code=$?
+          set -e
+
+          # Exit code 해석
+          # 0: 기한 초과 없음
+          # 1: 기한 초과 파일 있음
+          # 2+: 오류 발생
+          if [ $exit_code -eq 0 ]; then
+            echo "has_overdue=false" >> $GITHUB_OUTPUT
+          elif [ $exit_code -eq 1 ]; then
+            echo "has_overdue=true" >> $GITHUB_OUTPUT
+            {
+              echo 'report<<EOF'
+              cat report.md
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "::error::Script failed with exit code $exit_code"
+            cat report.md
+            exit $exit_code
+          fi
+
+      - name: Create Issue if overdue files found
+        if: steps.report.outputs.has_overdue == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `📅 데이터 리뷰 필요 (${new Date().toISOString().slice(0, 10)})`;
+            const body = `${{ steps.report.outputs.report }}`;
+
+            // 기존 열린 이슈 확인
+            const existingIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'maintenance,freshness',
+            });
+
+            if (existingIssues.data.length > 0) {
+              // 가장 최근 이슈 업데이트
+              const latestIssue = existingIssues.data[0];
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: latestIssue.number,
+                body: body,
+              });
+              console.log(`Updated existing issue #${latestIssue.number}`);
+            } else {
+              // 새 이슈 생성
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['maintenance', 'freshness'],
+              });
+              console.log('Created new issue');
+            }
+
+  # ─────────────────────────────────────────────────────────
+  # 조문 검증 (분기별: 1/1, 4/1, 7/1, 10/1)
+  # ─────────────────────────────────────────────────────────
+  validate-citations:
+    name: Validate Citations
+    runs-on: ubuntu-latest
+    # 분기 첫날 스케줄 또는 수동 실행
+    if: |
+      github.event_name == 'workflow_dispatch' && github.event.inputs.task == 'validate-citations'
+      ||
+      github.event_name == 'schedule' && github.event.schedule == '0 0 1 1,4,7,10 *'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Validate citations
+        id: validate
+        working-directory: ${{ env.SCRIPTS_DIR }}
+        env:
+          BEOPSUNY_OC_CODE: ${{ secrets.FAMILY_OC_CODE }}
+        run: |
+          set +e
+          # 샘플 검증 (API 호출 제한 고려)
+          python maintenance/validate_citations.py --sample 20 --markdown > report.md 2>&1
+          exit_code=$?
+          set -e
+
+          # Exit code 해석
+          # 0: 모두 유효
+          # 1: 무효 조문 발견
+          # 2+: 오류 발생
+          if [ $exit_code -eq 0 ]; then
+            echo "has_invalid=false" >> $GITHUB_OUTPUT
+          elif [ $exit_code -eq 1 ]; then
+            echo "has_invalid=true" >> $GITHUB_OUTPUT
+            {
+              echo 'report<<EOF'
+              cat report.md
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "::error::Script failed with exit code $exit_code"
+            cat report.md
+            exit $exit_code
+          fi
+
+      - name: Create Issue if invalid citations found
+        if: steps.validate.outputs.has_invalid == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `📋 조문 검증 필요 (${new Date().toISOString().slice(0, 7)})`;
+            const body = `${{ steps.validate.outputs.report }}`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['maintenance', 'citation-check'],
+            });
+            console.log('Created citation validation issue');
