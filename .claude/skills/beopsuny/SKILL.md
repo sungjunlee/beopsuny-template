@@ -226,9 +226,10 @@ fetch_law.py calendar list --format json          # JSON 출력
 
 **iCal 구독 (캘린더 앱 연동):**
 ```bash
-python generate_ical.py --output assets/compliance.ics
+python generate_ical.py  # 기본 출력: 프로젝트 루트/assets/compliance.ics
 ```
 → Google Calendar/Outlook에서 raw URL로 구독 가능
+→ 구독 URL: `https://raw.githubusercontent.com/.../main/assets/compliance.ics`
 
 > 캘린더 데이터: `assets/compliance_calendar.yaml`
 
