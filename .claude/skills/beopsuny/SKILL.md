@@ -214,6 +214,24 @@ fetch_law.py checklist show startup --output startup.md  # 파일 저장
 
 > 체크리스트 위치: `assets/checklists/*.yaml`
 
+### 법정 의무 캘린더
+
+```bash
+fetch_law.py calendar upcoming                    # 30일 내 마감 의무
+fetch_law.py calendar upcoming --days 60          # 60일 내 마감 의무
+fetch_law.py calendar upcoming --filter listed    # 상장사만
+fetch_law.py calendar list                        # 전체 목록
+fetch_law.py calendar list --format json          # JSON 출력
+```
+
+**iCal 구독 (캘린더 앱 연동):**
+```bash
+python generate_ical.py --output assets/compliance.ics
+```
+→ Google Calendar/Outlook에서 raw URL로 구독 가능
+
+> 캘린더 데이터: `assets/compliance_calendar.yaml`
+
 ### 법령 개정 비교
 
 ```bash
