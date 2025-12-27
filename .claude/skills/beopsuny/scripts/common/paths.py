@@ -24,6 +24,7 @@ LEGAL_TERMS_PATH = ASSETS_DIR / "legal_terms.yaml"
 CLAUSE_REFS_PATH = ASSETS_DIR / "clause_references.yaml"
 FORMS_PATH = ASSETS_DIR / "forms.yaml"
 CHECKLISTS_DIR = ASSETS_DIR / "checklists"
+CALENDAR_PATH = ASSETS_DIR / "compliance_calendar.yaml"
 
 # Reference documentation (Agent Skills spec: references/)
 REFERENCES_DIR = SKILL_DIR / "references"

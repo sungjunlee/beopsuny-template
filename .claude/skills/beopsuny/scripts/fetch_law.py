@@ -37,6 +37,7 @@ from common.paths import (
     CONFIG_PATH,
     LAW_INDEX_PATH,
     CHECKLISTS_DIR,
+    CALENDAR_PATH,
     DATA_RAW_DIR,
     DATA_PARSED_DIR,
     API_BASE_URL,
@@ -1868,6 +1869,269 @@ def show_checklist(name: str, output_file: str = None, output_format: str = "mar
     return data
 
 
+# ─────────────────────────────────────────────────────────
+# 법정 의무 캘린더 (Compliance Calendar)
+# ─────────────────────────────────────────────────────────
+
+def load_calendar():
+    """법정 의무 캘린더 YAML 로드"""
+    if not CALENDAR_PATH.exists():
+        print(f"캘린더 파일을 찾을 수 없습니다: {CALENDAR_PATH}", file=sys.stderr)
+        return None
+
+    with open(CALENDAR_PATH, 'r', encoding='utf-8') as f:
+        return yaml.safe_load(f)
+
+
+def get_upcoming_obligations(days: int = 30, filter_type: str = None):
+    """다가오는 법정 의무 목록 반환
+
+    Args:
+        days: 앞으로 N일 이내의 의무
+        filter_type: 필터 (all, listed, large, sme, corp)
+
+    Returns:
+        list of obligations with calculated deadlines
+    """
+    data = load_calendar()
+    if not data:
+        return []
+
+    today = datetime.now()
+    current_year = today.year
+    current_month = today.month
+
+    upcoming = []
+
+    # 연간 의무 처리
+    for item in data.get('annual', []):
+        deadline_month = item.get('deadline_month')
+        deadline_day = item.get('deadline_day', 1)
+
+        if deadline_month:
+            # 올해 또는 내년 기준으로 마감일 계산
+            try:
+                deadline = datetime(current_year, deadline_month, deadline_day)
+                if deadline < today:
+                    # 이미 지났으면 내년으로
+                    deadline = datetime(current_year + 1, deadline_month, deadline_day)
+            except ValueError:
+                # 날짜 오류 시 스킵
+                continue
+
+            days_until = (deadline - today).days
+            if 0 <= days_until <= days:
+                # 필터 적용
+                if filter_type and filter_type != 'all':
+                    applies_to = item.get('applies_to', {})
+                    company_types = applies_to.get('company_type', ['all'])
+                    if filter_type not in company_types and 'all' not in company_types:
+                        continue
+
+                upcoming.append({
+                    'type': 'annual',
+                    'id': item.get('id'),
+                    'name': item.get('name'),
+                    'description': item.get('description'),
+                    'law': item.get('law'),
+                    'deadline': deadline.strftime('%Y-%m-%d'),
+                    'days_until': days_until,
+                    'priority': item.get('priority', 'medium'),
+                    'penalty': item.get('penalty'),
+                })
+
+    # 분기 의무 처리 (occurrences 사용)
+    for item in data.get('quarterly', []):
+        for occ in item.get('occurrences', []):
+            occ_month = occ.get('month')
+            occ_day = occ.get('day', 1)
+
+            if occ_month:
+                try:
+                    deadline = datetime(current_year, occ_month, occ_day)
+                    if deadline < today:
+                        deadline = datetime(current_year + 1, occ_month, occ_day)
+                except ValueError:
+                    continue
+
+                days_until = (deadline - today).days
+                if 0 <= days_until <= days:
+                    if filter_type and filter_type != 'all':
+                        applies_to = item.get('applies_to', {})
+                        company_types = applies_to.get('company_type', ['all'])
+                        if filter_type not in company_types and 'all' not in company_types:
+                            continue
+
+                    upcoming.append({
+                        'type': 'quarterly',
+                        'id': item.get('id'),
+                        'name': f"{item.get('name')} ({occ.get('label', '')})",
+                        'description': item.get('description'),
+                        'law': item.get('law'),
+                        'deadline': deadline.strftime('%Y-%m-%d'),
+                        'days_until': days_until,
+                        'priority': item.get('priority', 'medium'),
+                        'penalty': item.get('penalty'),
+                    })
+
+    # 월별 의무 처리
+    for item in data.get('monthly', []):
+        deadline_day = item.get('deadline_day', 10)
+
+        # 이번 달 또는 다음 달
+        try:
+            deadline = datetime(current_year, current_month, deadline_day)
+            if deadline < today:
+                # 이번 달 지났으면 다음 달
+                next_month = current_month + 1
+                next_year = current_year
+                if next_month > 12:
+                    next_month = 1
+                    next_year += 1
+                deadline = datetime(next_year, next_month, deadline_day)
+        except ValueError:
+            continue
+
+        days_until = (deadline - today).days
+        if 0 <= days_until <= days:
+            if filter_type and filter_type != 'all':
+                applies_to = item.get('applies_to', {})
+                company_types = applies_to.get('company_type', ['all'])
+                if filter_type not in company_types and 'all' not in company_types:
+                    continue
+
+            upcoming.append({
+                'type': 'monthly',
+                'id': item.get('id'),
+                'name': item.get('name'),
+                'description': item.get('description'),
+                'law': item.get('law'),
+                'deadline': deadline.strftime('%Y-%m-%d'),
+                'days_until': days_until,
+                'priority': item.get('priority', 'medium'),
+                'penalty': item.get('penalty'),
+            })
+
+    # 마감일 순 정렬
+    upcoming.sort(key=lambda x: x['days_until'])
+
+    return upcoming
+
+
+def show_calendar(days: int = 30, filter_type: str = None, output_format: str = 'text'):
+    """법정 의무 캘린더 출력
+
+    Args:
+        days: 앞으로 N일 이내의 의무 표시
+        filter_type: 회사 유형 필터
+        output_format: 출력 형식 (text, json, markdown)
+    """
+    data = load_calendar()
+    if not data:
+        return
+
+    upcoming = get_upcoming_obligations(days, filter_type)
+
+    if output_format == 'json':
+        print(json.dumps({'upcoming': upcoming, 'total': len(upcoming)}, ensure_ascii=False, indent=2))
+        return
+
+    # 헤더
+    today_str = datetime.now().strftime('%Y-%m-%d')
+    print(f"\n📅 법정 의무 캘린더 (기준일: {today_str})")
+    print(f"   앞으로 {days}일 내 마감 의무")
+    if filter_type:
+        print(f"   필터: {filter_type}")
+    print("=" * 60)
+
+    if not upcoming:
+        print("\n✅ 해당 기간 내 마감 의무가 없습니다.")
+        return
+
+    # 우선순위별 이모지
+    priority_emoji = {
+        'critical': '🔴',
+        'high': '🟠',
+        'medium': '🟡',
+        'low': '🟢',
+    }
+
+    for item in upcoming:
+        emoji = priority_emoji.get(item['priority'], '⚪')
+        days_text = f"D-{item['days_until']}" if item['days_until'] > 0 else "📢 오늘!"
+
+        print(f"\n{emoji} [{days_text}] {item['name']}")
+        print(f"   마감: {item['deadline']}")
+        print(f"   근거: {item['law']}")
+        if item.get('penalty'):
+            print(f"   벌칙: {item['penalty']}")
+
+    print("\n" + "=" * 60)
+    print(f"총 {len(upcoming)}건")
+
+    # 면책 고지
+    disclaimer = data.get('disclaimer', '')
+    if disclaimer:
+        print(f"\n⚠️  {disclaimer[:100]}...")
+
+
+def show_calendar_all(output_format: str = 'text'):
+    """전체 법정 의무 목록 출력"""
+    data = load_calendar()
+    if not data:
+        return
+
+    if output_format == 'json':
+        print(json.dumps(data, ensure_ascii=False, indent=2))
+        return
+
+    print(f"\n📅 {data.get('name', '법정 의무 캘린더')}")
+    print(f"   {data.get('description', '')}")
+    print(f"   마지막 업데이트: {data.get('last_updated', 'N/A')}")
+    print("=" * 60)
+
+    # 연간 의무
+    annual = data.get('annual', [])
+    if annual:
+        print(f"\n📆 연간 의무 ({len(annual)}건)")
+        print("-" * 40)
+        for item in annual:
+            print(f"  • {item.get('name')}")
+            print(f"    기한: {item.get('deadline_rule')}")
+            print(f"    근거: {item.get('law')}")
+
+    # 분기 의무
+    quarterly = data.get('quarterly', [])
+    if quarterly:
+        print(f"\n📆 분기 의무 ({len(quarterly)}건)")
+        print("-" * 40)
+        for item in quarterly:
+            print(f"  • {item.get('name')}")
+            print(f"    기한: {item.get('deadline_rule')}")
+
+    # 월별 의무
+    monthly = data.get('monthly', [])
+    if monthly:
+        print(f"\n📆 월별 의무 ({len(monthly)}건)")
+        print("-" * 40)
+        for item in monthly:
+            print(f"  • {item.get('name')}")
+            print(f"    기한: 매월 {item.get('deadline_day')}일")
+
+    # 수시 의무
+    event_driven = data.get('event_driven', [])
+    if event_driven:
+        print(f"\n📆 수시 의무 ({len(event_driven)}건)")
+        print("-" * 40)
+        for item in event_driven:
+            print(f"  • {item.get('name')}")
+            print(f"    트리거: {item.get('trigger')}")
+            print(f"    기한: {item.get('deadline_rule')}")
+
+    total = len(annual) + len(quarterly) + len(monthly) + len(event_driven)
+    print(f"\n총 {total}건")
+
+
 def main():
     parser = argparse.ArgumentParser(description='Korean Law Fetcher')
     subparsers = parser.add_subparsers(dest='command', help='Commands')
@@ -1939,6 +2203,24 @@ def main():
     checklist_show_parser.add_argument('--format', '-f', default='markdown', choices=['markdown', 'json'],
                                        help='출력 형식 (markdown, json)')
 
+    # calendar 명령 (법정 의무 캘린더)
+    calendar_parser = subparsers.add_parser('calendar', help='법정 의무 캘린더 조회')
+    calendar_subparsers = calendar_parser.add_subparsers(dest='calendar_command', help='캘린더 명령')
+
+    # calendar upcoming (기본)
+    calendar_upcoming_parser = calendar_subparsers.add_parser('upcoming', help='다가오는 법정 의무')
+    calendar_upcoming_parser.add_argument('--days', type=int, default=30, help='앞으로 N일 내 (기본: 30)')
+    calendar_upcoming_parser.add_argument('--filter', dest='filter_type',
+                                          choices=['all', 'corp', 'listed', 'large', 'sme'],
+                                          help='회사 유형 필터')
+    calendar_upcoming_parser.add_argument('--format', '-f', default='text', choices=['text', 'json'],
+                                          help='출력 형식')
+
+    # calendar list (전체 목록)
+    calendar_list_parser = calendar_subparsers.add_parser('list', help='전체 법정 의무 목록')
+    calendar_list_parser.add_argument('--format', '-f', default='text', choices=['text', 'json'],
+                                      help='출력 형식')
+
     args = parser.parse_args()
 
     if args.command == 'search':
@@ -1968,6 +2250,14 @@ def main():
             show_checklist(args.name, output_file=args.output, output_format=args.format)
         else:
             checklist_parser.print_help()
+    elif args.command == 'calendar':
+        if args.calendar_command == 'upcoming':
+            show_calendar(days=args.days, filter_type=args.filter_type, output_format=args.format)
+        elif args.calendar_command == 'list':
+            show_calendar_all(output_format=args.format)
+        else:
+            # 기본: upcoming 30일
+            show_calendar(days=30)
     else:
         parser.print_help()
 
