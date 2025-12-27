@@ -17,8 +17,9 @@ iCal 구독 방법:
 """
 
 import argparse
+import calendar
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Dict, Any
 from uuid import uuid4
@@ -32,11 +33,25 @@ from common.paths import CALENDAR_PATH, ASSETS_DIR
 def load_calendar() -> Dict[str, Any]:
     """법정 의무 캘린더 YAML 로드"""
     if not CALENDAR_PATH.exists():
-        print(f"캘린더 파일을 찾을 수 없습니다: {CALENDAR_PATH}", file=sys.stderr)
+        print(f"ERROR: 캘린더 파일을 찾을 수 없습니다: {CALENDAR_PATH}", file=sys.stderr)
         sys.exit(1)
 
-    with open(CALENDAR_PATH, 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f)
+    try:
+        with open(CALENDAR_PATH, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        print(f"ERROR: YAML 파싱 오류: {CALENDAR_PATH}", file=sys.stderr)
+        print(f"  상세: {e}", file=sys.stderr)
+        sys.exit(1)
+    except (PermissionError, OSError) as e:
+        print(f"ERROR: 파일 읽기 실패: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    if data is None:
+        print(f"ERROR: 캘린더 파일이 비어 있습니다: {CALENDAR_PATH}", file=sys.stderr)
+        sys.exit(1)
+
+    return data
 
 
 def format_datetime(dt: datetime, all_day: bool = True) -> str:
@@ -101,7 +116,7 @@ def create_vevent(
     lines = []
     lines.append("BEGIN:VEVENT")
     lines.append(f"UID:{uid}")
-    lines.append(f"DTSTAMP:{format_datetime(datetime.now(), all_day=False)}")
+    lines.append(f"DTSTAMP:{format_datetime(datetime.now(timezone.utc), all_day=False)}")
 
     if all_day:
         lines.append(f"DTSTART;VALUE=DATE:{format_datetime(dtstart)}")
@@ -174,12 +189,18 @@ def generate_ical(year: int = None, include_monthly: bool = True) -> str:
         deadline_month = item.get('deadline_month')
         deadline_day = item.get('deadline_day', 1)
 
+        if not item.get('name'):
+            print(f"WARNING: 'name' 누락으로 건너뜀: {item.get('id', 'unknown')}", file=sys.stderr)
+            continue
+
         if deadline_month:
             # 올해와 내년 두 해 생성
             for y in [year, year + 1]:
                 try:
                     deadline = datetime(y, deadline_month, deadline_day)
-                except ValueError:
+                except ValueError as e:
+                    print(f"WARNING: 날짜 오류로 '{item.get('name')}' 건너뜀 ({y}/{deadline_month}/{deadline_day}): {e}",
+                          file=sys.stderr)
                     continue
 
                 description = []
@@ -205,6 +226,10 @@ def generate_ical(year: int = None, include_monthly: bool = True) -> str:
 
     # 분기 의무 (occurrences 사용)
     for item in data.get('quarterly', []):
+        if not item.get('name'):
+            print(f"WARNING: 'name' 누락으로 건너뜀: {item.get('id', 'unknown')}", file=sys.stderr)
+            continue
+
         for occ in item.get('occurrences', []):
             occ_month = occ.get('month')
             occ_day = occ.get('day', 1)
@@ -214,7 +239,9 @@ def generate_ical(year: int = None, include_monthly: bool = True) -> str:
                 for y in [year, year + 1]:
                     try:
                         deadline = datetime(y, occ_month, occ_day)
-                    except ValueError:
+                    except ValueError as e:
+                        print(f"WARNING: 날짜 오류로 '{item.get('name')}' 건너뜀 ({y}/{occ_month}/{occ_day}): {e}",
+                              file=sys.stderr)
                         continue
 
                     description = []
@@ -241,16 +268,19 @@ def generate_ical(year: int = None, include_monthly: bool = True) -> str:
     # 월별 의무 (선택적)
     if include_monthly:
         for item in data.get('monthly', []):
+            if not item.get('name'):
+                print(f"WARNING: 'name' 누락으로 건너뜀: {item.get('id', 'unknown')}", file=sys.stderr)
+                continue
+
             deadline_day = item.get('deadline_day', 10)
 
             # 12개월분 생성
             for month in range(1, 13):
                 for y in [year, year + 1]:
-                    try:
-                        deadline = datetime(y, month, deadline_day)
-                    except ValueError:
-                        # 2월 30일 같은 경우
-                        continue
+                    # 2월 30일 같은 경우 해당 월의 마지막 날로 조정
+                    last_day_of_month = calendar.monthrange(y, month)[1]
+                    actual_day = min(deadline_day, last_day_of_month)
+                    deadline = datetime(y, month, actual_day)
 
                     description = []
                     if item.get('description'):
@@ -308,8 +338,18 @@ def main():
         print(ical_content)
     else:
         output_path = Path(args.output)
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(ical_content)
+        try:
+            # 부모 디렉토리가 없으면 생성
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(ical_content)
+        except PermissionError:
+            print(f"ERROR: 파일 쓰기 권한이 없습니다: {output_path}", file=sys.stderr)
+            print("  다른 경로를 지정하거나 권한을 확인하세요.", file=sys.stderr)
+            sys.exit(1)
+        except OSError as e:
+            print(f"ERROR: 파일 쓰기 실패: {e}", file=sys.stderr)
+            sys.exit(1)
 
         print(f"✅ iCal 파일 생성됨: {output_path}")
         print(f"   이벤트 수: {ical_content.count('BEGIN:VEVENT')}개")

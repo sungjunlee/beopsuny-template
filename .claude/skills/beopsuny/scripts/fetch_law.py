@@ -13,6 +13,7 @@ Usage:
 """
 
 import argparse
+import calendar
 import json
 import os
 import re
@@ -1876,11 +1877,25 @@ def show_checklist(name: str, output_file: str = None, output_format: str = "mar
 def load_calendar():
     """법정 의무 캘린더 YAML 로드"""
     if not CALENDAR_PATH.exists():
-        print(f"캘린더 파일을 찾을 수 없습니다: {CALENDAR_PATH}", file=sys.stderr)
+        print(f"ERROR: 캘린더 파일을 찾을 수 없습니다: {CALENDAR_PATH}", file=sys.stderr)
         return None
 
-    with open(CALENDAR_PATH, 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f)
+    try:
+        with open(CALENDAR_PATH, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        print(f"ERROR: YAML 파싱 오류: {CALENDAR_PATH}", file=sys.stderr)
+        print(f"  상세: {e}", file=sys.stderr)
+        return None
+    except (PermissionError, OSError) as e:
+        print(f"ERROR: 파일 읽기 실패: {e}", file=sys.stderr)
+        return None
+
+    if data is None:
+        print(f"ERROR: 캘린더 파일이 비어 있습니다: {CALENDAR_PATH}", file=sys.stderr)
+        return None
+
+    return data
 
 
 def get_upcoming_obligations(days: int = 30, filter_type: str = None):
@@ -1915,8 +1930,9 @@ def get_upcoming_obligations(days: int = 30, filter_type: str = None):
                 if deadline < today:
                     # 이미 지났으면 내년으로
                     deadline = datetime(current_year + 1, deadline_month, deadline_day)
-            except ValueError:
-                # 날짜 오류 시 스킵
+            except ValueError as e:
+                print(f"WARNING: 날짜 오류로 '{item.get('name')}' 건너뜀 ({deadline_month}/{deadline_day}): {e}",
+                      file=sys.stderr)
                 continue
 
             days_until = (deadline - today).days
@@ -1951,7 +1967,9 @@ def get_upcoming_obligations(days: int = 30, filter_type: str = None):
                     deadline = datetime(current_year, occ_month, occ_day)
                     if deadline < today:
                         deadline = datetime(current_year + 1, occ_month, occ_day)
-                except ValueError:
+                except ValueError as e:
+                    print(f"WARNING: 날짜 오류로 '{item.get('name')}' 건너뜀 ({occ_month}/{occ_day}): {e}",
+                          file=sys.stderr)
                     continue
 
                 days_until = (deadline - today).days
@@ -1978,19 +1996,24 @@ def get_upcoming_obligations(days: int = 30, filter_type: str = None):
     for item in data.get('monthly', []):
         deadline_day = item.get('deadline_day', 10)
 
-        # 이번 달 또는 다음 달
-        try:
-            deadline = datetime(current_year, current_month, deadline_day)
-            if deadline < today:
-                # 이번 달 지났으면 다음 달
-                next_month = current_month + 1
-                next_year = current_year
-                if next_month > 12:
-                    next_month = 1
-                    next_year += 1
-                deadline = datetime(next_year, next_month, deadline_day)
-        except ValueError:
-            continue
+        # 이번 달 또는 다음 달 (2월 등 짧은 달은 마지막 날로 조정)
+        target_year = current_year
+        target_month = current_month
+
+        # 해당 월의 마지막 날 확인
+        last_day_of_month = calendar.monthrange(target_year, target_month)[1]
+        actual_day = min(deadline_day, last_day_of_month)
+        deadline = datetime(target_year, target_month, actual_day)
+
+        if deadline < today:
+            # 이번 달 지났으면 다음 달
+            target_month += 1
+            if target_month > 12:
+                target_month = 1
+                target_year += 1
+            last_day_of_month = calendar.monthrange(target_year, target_month)[1]
+            actual_day = min(deadline_day, last_day_of_month)
+            deadline = datetime(target_year, target_month, actual_day)
 
         days_until = (deadline - today).days
         if 0 <= days_until <= days:
