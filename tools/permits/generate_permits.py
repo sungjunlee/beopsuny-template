@@ -19,8 +19,6 @@ import argparse
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any
-
 import yaml
 
 # 경로 설정
@@ -64,6 +62,19 @@ def load_seed_data() -> dict:
     except yaml.YAMLError as e:
         print(f"Error parsing seed data: {e}", file=sys.stderr)
         sys.exit(2)
+    except (OSError, UnicodeDecodeError) as e:
+        print(f"Error reading seed data file: {e}", file=sys.stderr)
+        sys.exit(2)
+
+
+def get_last_verified(item: dict) -> str:
+    """sources에서 last_verified 추출, 없으면 오늘 날짜 반환"""
+    sources = item.get("sources")
+    if sources and isinstance(sources, list) and len(sources) > 0:
+        first_source = sources[0]
+        if isinstance(first_source, dict) and "accessed" in first_source:
+            return first_source["accessed"]
+    return datetime.now().strftime("%Y-%m-%d")
 
 
 def transform_item(item: dict) -> dict:
@@ -85,7 +96,7 @@ def transform_item(item: dict) -> dict:
         "priority": item.get("priority", "medium"),
         "gov24_url": item.get("gov24_url"),
         "sources": item.get("sources", []),
-        "last_verified": item.get("sources", [{}])[0].get("accessed", datetime.now().strftime("%Y-%m-%d")),
+        "last_verified": get_last_verified(item),
         "notes": item.get("notes"),
     }
 
@@ -178,10 +189,19 @@ def main():
         print(yaml_content)
     else:
         output_path = Path(args.output)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(yaml_content)
+        try:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            print(f"Error creating output directory {output_path.parent}: {e}", file=sys.stderr)
+            sys.exit(2)
+
+        try:
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(yaml_content)
+        except OSError as e:
+            print(f"Error writing to {output_path}: {e}", file=sys.stderr)
+            sys.exit(2)
 
         print(f"Generated {output_path} with {len(permits_data['items'])} permits", file=sys.stderr)
 

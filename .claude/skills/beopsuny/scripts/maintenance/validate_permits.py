@@ -11,7 +11,6 @@ Usage:
     python validate_permits.py                # 전체 검증
     python validate_permits.py --markdown     # 마크다운 리포트 출력
     python validate_permits.py --json         # JSON 출력
-    python validate_permits.py --fix-refs     # 누락된 참조 자동 수정 제안
 
 Exit codes:
     0: 모든 검증 통과
@@ -57,6 +56,7 @@ def load_permits() -> Optional[dict]:
 def load_law_index() -> dict:
     """law_index.yaml 로드"""
     if not LAW_INDEX_PATH.exists():
+        print(f"Warning: {LAW_INDEX_PATH} not found - law_id 검증 건너뜀", file=sys.stderr)
         return {}
 
     try:

@@ -48,7 +48,7 @@ python generate_permits.py --output /path/to/permits.yaml
 ## 데이터 갱신 주기
 
 - **권장**: 분기별 (법령 개정 주기 고려)
-- **자동화**: GitHub Actions `check-permit-updates` job
+- **자동화**: GitHub Actions `validate-permits` job
 
 ## 주의사항
 
