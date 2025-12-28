@@ -13,7 +13,7 @@ last_updated: "2025-12-28"
 
 maintenance:
   review_cycle: "annual"
-  next_review: "2026-01"
+  next_review: "2026-12"
   volatile_items:
     - "중개보수 요율"
     - "임대차 3법 관련 규정"
@@ -173,7 +173,7 @@ items:
     laws:
       - name: "민간임대주택에 관한 특별법"
         articles: ["제7조"]
-        law_id: "012602"
+        law_id: "000243"
     notes: |
       - 관할: 시/도지사
       - 자본금 1억원 이상 (법인)

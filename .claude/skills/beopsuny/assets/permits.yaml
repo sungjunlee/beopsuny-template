@@ -510,7 +510,7 @@ items:
   law:
     name: 직업안정법
     article: 제19조
-    law_id: 001823
+    law_id: "001765"
   authority:
     name: 시/군/구청
     dept: 일자리정책과
@@ -561,7 +561,7 @@ items:
   law:
     name: 직업안정법
     article: 제18조
-    law_id: 001823
+    law_id: "001765"
   authority:
     name: 시/군/구청
     dept: 일자리정책과
@@ -1326,7 +1326,7 @@ items:
   law:
     name: 경비업법
     article: 제4조
-    law_id: '001775'
+    law_id: "000980"
   authority:
     name: 경찰청장
     dept: 생활안전과
