@@ -25,6 +25,7 @@ CLAUSE_REFS_PATH = ASSETS_DIR / "clause_references.yaml"
 FORMS_PATH = ASSETS_DIR / "forms.yaml"
 CHECKLISTS_DIR = ASSETS_DIR / "checklists"
 CALENDAR_PATH = ASSETS_DIR / "compliance_calendar.yaml"
+PERMITS_PATH = ASSETS_DIR / "permits.yaml"
 
 # Reference documentation (Agent Skills spec: references/)
 REFERENCES_DIR = SKILL_DIR / "references"
@@ -35,6 +36,7 @@ DATA_RAW_DIR = DATA_DIR / "raw"
 DATA_PARSED_DIR = DATA_DIR / "parsed"
 DATA_BILLS_DIR = DATA_DIR / "bills"
 DATA_POLICY_DIR = DATA_DIR / "policy"
+DATA_PERMITS_DIR = DATA_DIR / "permits"
 
 # API defaults (moved from settings.yaml)
 API_BASE_URL = "http://www.law.go.kr/DRF"
