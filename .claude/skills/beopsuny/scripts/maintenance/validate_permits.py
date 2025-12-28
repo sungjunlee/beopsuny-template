@@ -13,8 +13,8 @@ Usage:
     python validate_permits.py --json         # JSON 출력
 
 Exit codes:
-    0: 모든 검증 통과
-    1: 검증 실패 항목 발견
+    0: 모든 검증 통과 (경고만 있는 경우 포함)
+    1: 필수 검증 실패 항목 발견 (issues)
     2: 에러 발생 (파일 읽기 실패 등)
 """
 
@@ -26,13 +26,9 @@ from typing import Optional
 
 import yaml
 
-# 경로 설정
-SCRIPT_DIR = Path(__file__).parent
-SKILL_DIR = SCRIPT_DIR.parent.parent
-ASSETS_DIR = SKILL_DIR / "assets"
-CHECKLISTS_DIR = ASSETS_DIR / "checklists"
-PERMITS_PATH = ASSETS_DIR / "permits.yaml"
-LAW_INDEX_PATH = ASSETS_DIR / "law_index.yaml"
+# 경로 설정: common.paths에서 중앙 관리
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from common.paths import ASSETS_DIR, CHECKLISTS_DIR, LAW_INDEX_PATH, PERMITS_PATH
 
 # 필수 필드 정의
 REQUIRED_FIELDS = ["id", "name", "type", "category", "law", "authority"]
@@ -72,9 +68,11 @@ def load_law_index() -> dict:
 def get_available_checklists() -> set:
     """사용 가능한 체크리스트 ID 목록"""
     checklists = set()
-    if CHECKLISTS_DIR.exists():
-        for f in CHECKLISTS_DIR.glob("*.yaml"):
-            checklists.add(f.stem)
+    if not CHECKLISTS_DIR.exists():
+        print(f"Warning: {CHECKLISTS_DIR} not found - 체크리스트 검증 건너뜀", file=sys.stderr)
+        return checklists
+    for f in CHECKLISTS_DIR.glob("*.yaml"):
+        checklists.add(f.stem)
     return checklists
 
 
@@ -97,9 +95,17 @@ def validate_permit(permit: dict, law_index: dict, checklists: set) -> dict:
             warnings.append(f"권장 필드 누락: {field}")
 
     # 3. law_id 검증
-    law_info = permit.get("law", {})
-    law_id = law_info.get("law_id")
-    law_name = law_info.get("name") or law_info.get("short_name", "")
+    law_info = permit.get("law")
+    if law_info is None:
+        law_id = None
+        law_name = ""
+    elif not isinstance(law_info, dict):
+        issues.append(f"'law' 필드가 dict가 아님: {type(law_info).__name__}")
+        law_id = None
+        law_name = ""
+    else:
+        law_id = law_info.get("law_id")
+        law_name = law_info.get("name") or law_info.get("short_name", "")
 
     if law_id:
         # law_index에서 찾기

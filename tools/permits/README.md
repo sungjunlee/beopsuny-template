@@ -27,6 +27,7 @@ tools/permits/
 ```bash
 cd tools/permits
 python generate_permits.py
+python generate_permits.py --dry-run  # 실제 저장 없이 출력만
 ```
 
 출력 파일: `../../.claude/skills/beopsuny/assets/permits.yaml`

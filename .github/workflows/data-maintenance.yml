@@ -245,7 +245,7 @@ jobs:
   validate-citations:
     name: Validate Citations
     runs-on: ubuntu-latest
-    # 분기 첫날 스케줄 또는 수동 실행
+    # 분기 첫날 스케줄 또는 수동 실행 (all은 API 호출 제한으로 제외)
     if: |
       github.event_name == 'workflow_dispatch' && github.event.inputs.task == 'validate-citations'
       ||
@@ -319,8 +319,7 @@ jobs:
     runs-on: ubuntu-latest
     # 분기 첫날 스케줄 또는 수동 실행
     if: |
-      github.event_name == 'workflow_dispatch' &&
-      (github.event.inputs.task == 'all' || github.event.inputs.task == 'validate-permits')
+      github.event_name == 'workflow_dispatch' && github.event.inputs.task == 'validate-permits'
       ||
       github.event_name == 'schedule' && github.event.schedule == '0 0 1 1,4,7,10 *'
 
