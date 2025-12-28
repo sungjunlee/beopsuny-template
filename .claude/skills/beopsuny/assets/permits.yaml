@@ -36,6 +36,8 @@ maintenance:
   note: 분기별 법령 개정 확인 권장
   changelog:
   - date: '2025-12-28'
+    changes: 나머지 15개 인허가 추가 (의료, 부동산, 모빌리티, 콘텐츠, 금융)
+  - date: '2025-12-28'
     changes: 식품 인허가 3개 추가 (제조업 허가, 판매업 신고, 건강기능식품)
   - date: '2025-12-28'
     changes: 초기 버전 생성 (IT/스타트업 중심 12개)
@@ -58,6 +60,18 @@ categories:
 - id: food
   name: 식품/F&B
   description: 식품 제조, 판매, 수입, 건강기능식품
+- id: medical
+  name: 의료/헬스케어
+  description: 의료기기, 화장품, 의료기관
+- id: realestate
+  name: 부동산/건설
+  description: 중개업, 임대관리, 건설업
+- id: mobility
+  name: 모빌리티/운송
+  description: 여객운송, 화물운송, 자동차
+- id: content
+  name: 콘텐츠/미디어
+  description: 게임, 영상, 방송
 permit_types:
 - id: permit
   name: 허가
@@ -725,6 +739,668 @@ items:
     - 기능성 광고 시 사전심의 필수 (한국건강기능식품협회)
     - 질병 예방·치료 효능 표현 절대 금지 (의약품 오인 표현)
     - 온라인 판매 시 통신판매업 신고 병행 필수 (permit-001)
+
+# ─────────────────────────────────────────────────────────
+# 의료/헬스케어 (Medical & Healthcare)
+# ─────────────────────────────────────────────────────────
+- id: permit-016
+  name: 의료기기 판매업 신고
+  type: notification
+  category: medical
+  description: 의료기기를 판매하는 영업 (1~2등급)
+  law:
+    name: 의료기기법
+    article: 제17조
+    law_id: '009514'
+  authority:
+    name: 시/군/구청
+    dept: 위생과 또는 보건소
+  processing:
+    period: 7일 이내
+    methods:
+    - 인터넷 (정부24)
+    - 방문
+  fees:
+    amount: 0
+    note: 무료
+  documents:
+  - 의료기기 판매업 신고서
+  - 영업소 평면도
+  - 품질관리자 자격증명서 (2등급 이상)
+  requirements:
+  - 영업소 시설기준 충족
+  - 품질관리자 지정 (2등급 이상 판매 시)
+  penalty:
+  - 미신고 영업 시 1년 이하 징역 또는 1천만원 이하 벌금
+  related_checklists:
+  - healthcare
+  priority: high
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000156
+  sources:
+  - url: https://www.mfds.go.kr
+    name: 식품의약품안전처
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 1등급: 신고만으로 판매 가능
+    - 2등급: 품질관리자 지정 필요
+    - 3~4등급: 허가 필요 (별도 절차)
+    - 온라인 판매 시 통신판매업 신고 병행
+
+- id: permit-017
+  name: 화장품 제조업 등록
+  type: registration
+  category: medical
+  description: 화장품을 직접 제조하는 영업
+  law:
+    name: 화장품법
+    article: 제3조
+    law_id: '002015'
+  authority:
+    name: 식품의약품안전처
+    dept: 화장품정책과
+  processing:
+    period: 14일 이내
+    methods:
+    - 온라인 (의약품안전나라)
+    - 우편
+  fees:
+    amount: 25000
+    note: 등록수수료
+  documents:
+  - 화장품 제조업 등록신청서
+  - 시설명세서
+  - 품질관리 기준서
+  - 책임판매관리자 자격증명서
+  requirements:
+  - 시설기준 충족 (CGMP 권장)
+  - 책임판매관리자 지정
+  penalty:
+  - 미등록 제조 시 3년 이하 징역 또는 3천만원 이하 벌금
+  related_checklists:
+  - healthcare
+  priority: high
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000147
+  sources:
+  - url: https://www.mfds.go.kr
+    name: 식품의약품안전처
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 책임판매업과 별도 등록
+    - CGMP 인증 시 수출 등 유리
+    - OEM/ODM 제조 시에도 등록 필요
+
+# ─────────────────────────────────────────────────────────
+# 부동산/건설 (Real Estate & Construction)
+# ─────────────────────────────────────────────────────────
+- id: permit-018
+  name: 부동산 중개업 등록
+  type: registration
+  category: realestate
+  description: 부동산 중개업을 영위하는 사업자
+  law:
+    name: 공인중개사법
+    article: 제9조
+    law_id: '001654'
+  authority:
+    name: 시/군/구청
+    dept: 부동산정보과 또는 건축과
+  processing:
+    period: 10일 이내
+    methods:
+    - 인터넷 (정부24)
+    - 방문
+  fees:
+    amount: 20000
+    note: 등록면허세 별도
+  documents:
+  - 중개사무소 개설등록신청서
+  - 공인중개사 자격증 사본
+  - 사무소 확보 증빙 (임대차계약서 등)
+  - 손해배상책임 보장 증명서
+  requirements:
+  - 공인중개사 자격 취득
+  - 실무교육 이수 (28시간)
+  - 업무보증 설정 (보증보험 1억원 이상)
+  penalty:
+  - 무등록 중개 시 3년 이하 징역 또는 3천만원 이하 벌금
+  related_checklists:
+  - realestate
+  priority: critical
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=12600000006
+  sources:
+  - url: https://www.molit.go.kr
+    name: 국토교통부
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 법인 중개사무소: 대표자·사원 중 1인 이상 공인중개사
+    - 공인중개사협회 가입 권장
+    - 연간 교육 12시간 이수 의무
+
+- id: permit-019
+  name: 주택임대관리업 등록
+  type: registration
+  category: realestate
+  description: 주택 임대관리 서비스를 제공하는 사업자
+  law:
+    name: 민간임대주택에 관한 특별법
+    article: 제7조
+    law_id: '012602'
+  authority:
+    name: 시/도지사
+    dept: 주택정책과
+  processing:
+    period: 14일 이내
+    methods:
+    - 인터넷 (렌트홈)
+    - 방문
+  fees:
+    amount: 0
+  documents:
+  - 주택임대관리업 등록신청서
+  - 자본금 증명서류 (법인 1억원 이상)
+  - 전문인력 보유 증명
+  requirements:
+  - 자본금 1억원 이상 (법인)
+  - 전문인력 2인 이상
+  penalty:
+  - 미등록 영업 시 2년 이하 징역 또는 2천만원 이하 벌금
+  related_checklists:
+  - realestate
+  priority: high
+  gov24_url: https://www.renthome.go.kr
+  sources:
+  - url: https://www.molit.go.kr
+    name: 국토교통부
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 자기관리형/위탁관리형 구분
+    - 프롭테크 스타트업 해당 가능
+
+- id: permit-020
+  name: 건설업 등록
+  type: registration
+  category: realestate
+  description: 건설공사를 수급받아 시공하는 사업자
+  law:
+    name: 건설산업기본법
+    article: 제9조
+    law_id: '001721'
+  authority:
+    name: 시/도지사
+    dept: 건설과
+  processing:
+    period: 20일 이내
+    methods:
+    - 인터넷 (정부24)
+    - 방문
+  fees:
+    amount: 50000
+    note: 등록면허세 별도
+  documents:
+  - 건설업등록신청서
+  - 기술능력 보유 증명
+  - 자본금 증명서류
+  - 사무실 임대차계약서
+  requirements:
+  - 업종별 자본금 요건 (2억~7억원)
+  - 기술인력 보유
+  penalty:
+  - 무등록 영업 시 5년 이하 징역 또는 5천만원 이하 벌금
+  related_checklists:
+  - realestate
+  priority: critical
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000013
+  sources:
+  - url: https://www.molit.go.kr
+    name: 국토교통부
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 종합건설업/전문건설업 구분
+    - 업종별 자본금·기술인력 요건 상이
+    - 건설공제조합 출자금 필요
+
+# ─────────────────────────────────────────────────────────
+# 모빌리티/운송 (Mobility & Transportation)
+# ─────────────────────────────────────────────────────────
+- id: permit-021
+  name: 여객자동차 운송사업 면허
+  type: permit
+  category: mobility
+  description: 여객자동차 운송사업 (택시, 버스 등)
+  law:
+    name: 여객자동차 운수사업법
+    article: 제4조
+    law_id: '001640'
+  authority:
+    name: 시/도지사
+    dept: 교통정책과
+  processing:
+    period: 30일 이내
+    methods:
+    - 서면 (시/도청)
+  fees:
+    amount: 0
+    note: 별도 없음
+  documents:
+  - 여객자동차운송사업 면허신청서
+  - 사업계획서
+  - 차고지 확보 증명
+  - 자본금 증명서류
+  requirements:
+  - 사업계획 적정성 심사
+  - 차고지 확보
+  - 운전자격 보유자 확보
+  penalty:
+  - 무면허 영업 시 3년 이하 징역 또는 3천만원 이하 벌금
+  related_checklists:
+  - mobility
+  priority: critical
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000015
+  sources:
+  - url: https://www.molit.go.kr
+    name: 국토교통부
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 노선/구역 여객운송: 면허
+    - 전세버스, 택시 등 유형별 요건 상이
+    - 플랫폼 운송사업 별도 등록 필요
+
+- id: permit-022
+  name: 화물자동차 운송사업 허가
+  type: permit
+  category: mobility
+  description: 화물자동차를 이용한 운송사업
+  law:
+    name: 화물자동차 운수사업법
+    article: 제3조
+    law_id: '001641'
+  authority:
+    name: 시/도지사
+    dept: 물류정책과
+  processing:
+    period: 20일 이내
+    methods:
+    - 인터넷 (정부24)
+    - 방문
+  fees:
+    amount: 10000
+  documents:
+  - 화물자동차 운송사업 허가신청서
+  - 차고지 확보 증명
+  - 차량 확보 증명
+  requirements:
+  - 최소 차량 대수 확보 (1대 이상)
+  - 차고지 확보
+  - 자본금 요건 (법인 5천만원 이상)
+  penalty:
+  - 무허가 영업 시 2년 이하 징역 또는 2천만원 이하 벌금
+  related_checklists:
+  - mobility
+  priority: high
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000016
+  sources:
+  - url: https://www.molit.go.kr
+    name: 국토교통부
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 일반/용달/개별 화물 구분
+    - 화물운송 플랫폼: 화물정보망 사업 허가 별도
+
+# ─────────────────────────────────────────────────────────
+# 콘텐츠/미디어 (Content & Media)
+# ─────────────────────────────────────────────────────────
+- id: permit-023
+  name: 게임물 등급분류
+  type: permit
+  category: content
+  description: 게임물의 등급분류 결정을 받는 절차
+  law:
+    name: 게임산업진흥에 관한 법률
+    article: 제21조
+    law_id: '010196'
+  authority:
+    name: 게임물관리위원회
+    dept: 등급분류과
+  processing:
+    period: 15일 이내
+    methods:
+    - 온라인 (게임물관리위원회)
+  fees:
+    amount: 50000
+    note: 기본료 (게임당), 복잡도에 따라 상이
+  documents:
+  - 등급분류 신청서
+  - 게임물 내용 설명서
+  - 게임물 시연 가능 자료
+  requirements:
+  - 게임물 개발 완료
+  - 자체등급분류사업자 아닌 경우 신청 필수
+  penalty:
+  - 미등급 유통 시 2년 이하 징역 또는 2천만원 이하 벌금
+  related_checklists:
+  - startup
+  priority: critical
+  gov24_url: https://www.grac.or.kr
+  sources:
+  - url: https://www.grac.or.kr
+    name: 게임물관리위원회
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 등급: 전체이용가/12세/15세/18세이용가
+    - 오픈마켓 게임: 자체등급분류 가능 (구글/애플)
+    - 사행성 게임물: 등급거부 가능
+
+- id: permit-024
+  name: 영상물 등급분류
+  type: permit
+  category: content
+  description: 영화, OTT 콘텐츠 등 영상물 등급분류
+  law:
+    name: 영화 및 비디오물의 진흥에 관한 법률
+    article: 제29조
+    law_id: '008700'
+  authority:
+    name: 영상물등급위원회
+    dept: 등급분류과
+  processing:
+    period: 15일 이내
+    methods:
+    - 온라인 (영등위)
+  fees:
+    amount: 30000
+    note: 상영시간 기준 상이
+  documents:
+  - 등급분류 신청서
+  - 영상물 내용 설명서
+  - 상영용 파일
+  requirements:
+  - 영상물 제작 완료
+  penalty:
+  - 미등급 상영 시 2년 이하 징역 또는 2천만원 이하 벌금
+  related_checklists:
+  - startup
+  priority: high
+  gov24_url: https://www.kmrb.or.kr
+  sources:
+  - url: https://www.kmrb.or.kr
+    name: 영상물등급위원회
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 등급: 전체/12세/15세/청소년관람불가/제한상영가
+    - OTT 자체등급분류 가능 (넷플릭스 등)
+    - 극장 상영 시 필수
+
+# ─────────────────────────────────────────────────────────
+# 금융 추가 (Finance - Additional)
+# ─────────────────────────────────────────────────────────
+- id: permit-025
+  name: 대부업 등록
+  type: registration
+  category: finance
+  description: 금전 대부를 영업으로 하는 사업자
+  law:
+    name: 대부업 등의 등록 및 금융이용자 보호에 관한 법률
+    article: 제3조
+    law_id: '009348'
+  authority:
+    name: 시/도지사
+    dept: 금융정책과
+  processing:
+    period: 20일 이내
+    methods:
+    - 인터넷 (정부24)
+    - 방문
+  fees:
+    amount: 100000
+    note: 등록면허세 별도
+  documents:
+  - 대부업 등록신청서
+  - 자본금 증명서류 (3억원 이상)
+  - 대표자 이력서
+  - 사무실 임대차계약서
+  requirements:
+  - 자본금 3억원 이상
+  - 결격사유 없을 것
+  - 사무소 확보
+  penalty:
+  - 무등록 영업 시 5년 이하 징역 또는 5천만원 이하 벌금
+  related_checklists:
+  - startup
+  priority: critical
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=12600000009
+  sources:
+  - url: https://www.fsc.go.kr
+    name: 금융위원회
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 이자율 상한: 연 20%
+    - 대부중개업 별도 등록
+    - 광역시/도 단위 등록
+
+- id: permit-026
+  name: 보험대리점 등록
+  type: registration
+  category: finance
+  description: 보험회사를 위해 보험계약 체결을 대리하는 사업자
+  law:
+    name: 보험업법
+    article: 제87조
+    law_id: '001532'
+  authority:
+    name: 금융감독원
+    dept: 보험감독국
+  processing:
+    period: 14일 이내
+    methods:
+    - 온라인 (금융감독원)
+  fees:
+    amount: 0
+  documents:
+  - 보험대리점 등록신청서
+  - 보험설계사 자격증
+  - 사업계획서
+  requirements:
+  - 보험설계사 자격 보유
+  - 결격사유 없을 것
+  penalty:
+  - 미등록 영업 시 3년 이하 징역 또는 3천만원 이하 벌금
+  related_checklists:
+  - startup
+  priority: high
+  gov24_url: https://www.fss.or.kr
+  sources:
+  - url: https://www.fss.or.kr
+    name: 금융감독원
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 법인대리점/개인대리점 구분
+    - 인슈어테크 스타트업 해당 가능
+    - GA(보험대리점) 설립 시 자본금 요건
+
+- id: permit-027
+  name: 가상자산사업자 신고
+  type: notification
+  category: finance
+  description: 가상자산 매매·교환·관리 사업자
+  law:
+    name: 특정 금융거래정보의 보고 및 이용 등에 관한 법률
+    article: 제7조
+    law_id: '002100'
+  authority:
+    name: 금융정보분석원
+    dept: 가상자산과
+  processing:
+    period: 3~6개월
+    methods:
+    - 온라인 (KoFIU)
+  fees:
+    amount: 0
+  documents:
+  - 가상자산사업자 신고서
+  - ISMS 인증서
+  - 실명확인 입출금계정 계약서
+  - 내부통제기준
+  requirements:
+  - ISMS(정보보호관리체계) 인증 필수
+  - 실명확인 입출금계정(실명계좌) 확보
+  - 자금세탁방지(AML) 체계 구축
+  penalty:
+  - 미신고 영업 시 5년 이하 징역 또는 5천만원 이하 벌금
+  related_checklists:
+  - startup
+  priority: critical
+  gov24_url: https://www.kofiu.go.kr
+  sources:
+  - url: https://www.kofiu.go.kr
+    name: 금융정보분석원
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - ISMS 인증: 한국인터넷진흥원(KISA)
+    - 실명계좌 발급: 시중은행 협조 필요 (사실상 진입장벽)
+    - 가상자산이용자보호법 추가 준수
+
+# ─────────────────────────────────────────────────────────
+# 기타 (Miscellaneous)
+# ─────────────────────────────────────────────────────────
+- id: permit-028
+  name: 폐기물 처리업 허가
+  type: permit
+  category: commerce
+  description: 폐기물 수집·운반·처리업
+  law:
+    name: 폐기물관리법
+    article: 제25조
+    law_id: '001762'
+  authority:
+    name: 시/도지사 또는 시장/군수/구청장
+    dept: 환경과
+  processing:
+    period: 20일 이내
+    methods:
+    - 인터넷 (정부24)
+    - 방문
+  fees:
+    amount: 50000
+  documents:
+  - 폐기물처리업 허가신청서
+  - 사업계획서
+  - 시설·장비 명세서
+  - 기술능력 증명서류
+  requirements:
+  - 폐기물처리시설 확보
+  - 기술인력 확보
+  - 자본금 요건 충족
+  penalty:
+  - 무허가 영업 시 7년 이하 징역 또는 7천만원 이하 벌금
+  related_checklists:
+  - startup
+  priority: high
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000054
+  sources:
+  - url: https://www.me.go.kr
+    name: 환경부
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 사업폐기물/생활폐기물 구분
+    - 허가 업종: 수집운반/중간처분/최종처분/종합처리
+    - 순환경제 스타트업 해당 가능
+
+- id: permit-029
+  name: 경비업 허가
+  type: permit
+  category: hr
+  description: 시설경비, 호송경비, 신변보호 등 경비 서비스
+  law:
+    name: 경비업법
+    article: 제4조
+    law_id: '001775'
+  authority:
+    name: 경찰청장
+    dept: 생활안전과
+  processing:
+    period: 30일 이내
+    methods:
+    - 방문 (관할 경찰서)
+  fees:
+    amount: 0
+  documents:
+  - 경비업 허가신청서
+  - 법인등기사항증명서
+  - 임원 경력증명서
+  - 자본금 증명서류
+  requirements:
+  - 법인만 가능 (개인사업자 불가)
+  - 자본금 1억원 이상
+  - 결격사유 없을 것
+  penalty:
+  - 무허가 영업 시 3년 이하 징역 또는 3천만원 이하 벌금
+  related_checklists:
+  - startup
+  priority: high
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=12600000005
+  sources:
+  - url: https://www.police.go.kr
+    name: 경찰청
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 경비업 종류: 시설경비/호송경비/신변보호/기계경비/특수경비
+    - AI 보안 스타트업 해당 가능 (기계경비)
+
+- id: permit-030
+  name: 인력파견업 허가
+  type: permit
+  category: hr
+  description: 근로자파견사업을 영위하는 사업자
+  law:
+    name: 파견근로자 보호 등에 관한 법률
+    article: 제7조
+    law_id: '001755'
+  authority:
+    name: 고용노동부 장관
+    dept: 비정규직대책과
+  processing:
+    period: 30일 이내
+    methods:
+    - 방문 (고용노동관서)
+  fees:
+    amount: 0
+  documents:
+  - 근로자파견사업 허가신청서
+  - 자본금 증명서류 (1억원 이상)
+  - 사무실 임대차계약서
+  requirements:
+  - 자본금 1억원 이상
+  - 전용 사무실 확보
+  - 결격사유 없을 것
+  penalty:
+  - 무허가 영업 시 3년 이하 징역 또는 3천만원 이하 벌금
+  related_checklists:
+  - labor_hr
+  priority: high
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=12600000010
+  sources:
+  - url: https://www.moel.go.kr
+    name: 고용노동부
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 파견 허용 업무: 32개 업종 (제조업 직접생산공정 금지)
+    - 파견기간: 원칙 1년, 최대 2년
+    - HR테크 스타트업 해당 가능
 
 disclaimer: '이 데이터는 정부24(gov.kr) 및 각 부처 공식 자료를 기반으로 합니다.
 

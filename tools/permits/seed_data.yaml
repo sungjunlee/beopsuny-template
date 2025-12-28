@@ -40,6 +40,18 @@ categories:
   - id: food
     name: 식품/F&B
     description: 식품 제조, 판매, 수입, 건강기능식품
+  - id: medical
+    name: 의료/헬스케어
+    description: 의료기기, 화장품, 의료기관
+  - id: realestate
+    name: 부동산/건설
+    description: 중개업, 임대관리, 건설업
+  - id: mobility
+    name: 모빌리티/운송
+    description: 여객운송, 화물운송, 자동차
+  - id: content
+    name: 콘텐츠/미디어
+    description: 게임, 영상, 방송
 
 # ─────────────────────────────────────────────────────────
 # 허가 유형 정의
