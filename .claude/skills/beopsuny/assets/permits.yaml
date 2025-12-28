@@ -36,6 +36,8 @@ maintenance:
   note: 분기별 법령 개정 확인 권장
   changelog:
   - date: '2025-12-28'
+    changes: 식품 인허가 3개 추가 (제조업 허가, 판매업 신고, 건강기능식품)
+  - date: '2025-12-28'
     changes: 초기 버전 생성 (IT/스타트업 중심 12개)
 categories:
 - id: commerce
@@ -53,6 +55,9 @@ categories:
 - id: hr
   name: 인사/노무
   description: 채용, 직업소개, 파견
+- id: food
+  name: 식품/F&B
+  description: 식품 제조, 판매, 수입, 건강기능식품
 permit_types:
 - id: permit
   name: 허가
@@ -570,6 +575,157 @@ items:
     accessed: '2025-12-28'
   last_verified: '2025-12-28'
   notes: null
+
+# ─────────────────────────────────────────────────────────
+# 식품/F&B (Food & Beverage)
+# ─────────────────────────────────────────────────────────
+- id: permit-013
+  name: 식품제조·가공업 허가
+  type: permit
+  category: food
+  description: 식품을 제조·가공하여 판매하는 영업
+  law:
+    name: 식품위생법
+    article: 제37조
+    law_id: '001805'
+  authority:
+    name: 시/군/구청
+    dept: 위생과 또는 보건소
+  processing:
+    period: 10~14일
+    methods:
+    - 인터넷 (정부24)
+    - 방문 (관할 보건소)
+  fees:
+    amount: 28000
+    note: 허가수수료 (지자체별 상이)
+  documents:
+  - 식품제조·가공업 영업허가 신청서
+  - 제조시설 및 설비 명세서
+  - 위생교육 이수증
+  - 건강진단서 (영업자 및 종업원)
+  - 시설평면도
+  - 수질검사 성적서 (지하수 사용 시)
+  requirements:
+  - 시설기준 충족 (식품위생법 시행규칙 별표 14)
+  - 영업자 위생교육 이수 (8시간, 한국식품산업협회 등)
+  - 종업원 건강진단 (연 1회)
+  - HACCP 의무업종 해당 시 인증 필수
+  penalty:
+  - 무허가 영업 시 5년 이하 징역 또는 5천만원 이하 벌금 (법 제97조)
+  - 시설기준 미달 시 영업정지 또는 허가취소
+  related_checklists:
+  - food_business
+  priority: critical
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000127
+  sources:
+  - url: https://www.foodsafetykorea.go.kr
+    name: 식품안전나라
+    accessed: '2025-12-28'
+  - url: https://easylaw.go.kr/CSP/CnpClsMain.laf?csmSeq=691
+    name: 찾기쉬운법령 - 식품제조업
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - HACCP 의무 품목군: 어육가공품, 냉동식품(피자류·만두류·면류), 빙과류,
+      비가열음료, 레토르트식품, 김치류(배추김치)
+    - 식품이력추적관리 등록 필요 (연매출 1억원 이상)
+    - 영양표시 의무 (가공식품)
+    - 자가품질검사 의무 (품목별 주기 상이)
+
+- id: permit-014
+  name: 식품판매업 신고
+  type: notification
+  category: food
+  description: 식품을 판매하는 영업 (식품소분업, 식품판매업, 집단급식소식품판매업)
+  law:
+    name: 식품위생법
+    article: 제37조 제4항
+    law_id: '001805'
+  authority:
+    name: 시/군/구청
+    dept: 위생과 또는 보건소
+  processing:
+    period: 즉시~3일
+    methods:
+    - 인터넷 (정부24)
+    - 방문 (관할 보건소)
+  fees:
+    amount: 0
+    note: 무료 (일부 지자체 수수료 부과)
+  documents:
+  - 식품판매업 영업신고서
+  - 위생교육 이수증
+  - 영업장 평면도
+  requirements:
+  - 영업장 시설기준 충족
+  - 위생교육 이수 (4시간)
+  penalty:
+  - 미신고 영업 시 3년 이하 징역 또는 3천만원 이하 벌금
+  - 영업정지 또는 영업소 폐쇄
+  related_checklists:
+  - food_business
+  - startup
+  priority: high
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000128
+  sources:
+  - url: https://www.foodsafetykorea.go.kr
+    name: 식품안전나라
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 유형: 식품소분업, 식품판매업, 집단급식소식품판매업, 식품자동판매기영업
+    - 온라인 판매 시 통신판매업 신고 병행 필수 (permit-001)
+    - 수입식품 판매 시 수입식품안전관리특별법 추가 적용
+
+- id: permit-015
+  name: 건강기능식품 판매업 신고
+  type: notification
+  category: food
+  description: 건강기능식품을 판매하는 영업
+  law:
+    name: 건강기능식품에 관한 법률
+    article: 제6조
+    law_id: '009353'
+  authority:
+    name: 시/군/구청
+    dept: 위생과 또는 보건소
+  processing:
+    period: 즉시~3일
+    methods:
+    - 인터넷 (정부24)
+    - 방문 (관할 보건소)
+  fees:
+    amount: 0
+    note: 무료
+  documents:
+  - 건강기능식품 판매업 영업신고서
+  - 위생교육 이수증 (건강기능식품 전문)
+  - 영업장 평면도
+  requirements:
+  - 영업장 시설기준 충족
+  - 건강기능식품 위생교육 이수 (한국건강기능식품협회)
+  penalty:
+  - 미신고 영업 시 1년 이하 징역 또는 1천만원 이하 벌금 (법 제32조)
+  - 허위·과대광고 시 5년 이하 징역 또는 5천만원 이하 벌금
+  related_checklists:
+  - food_business
+  priority: high
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000145
+  sources:
+  - url: https://www.foodsafetykorea.go.kr
+    name: 식품안전나라
+    accessed: '2025-12-28'
+  - url: https://www.khsa.or.kr
+    name: 한국건강기능식품협회
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: |
+    - 건강기능식품 제조업은 식약처장 허가 + GMP 의무 (판매업과 별도)
+    - 기능성 광고 시 사전심의 필수 (한국건강기능식품협회)
+    - 질병 예방·치료 효능 표현 절대 금지 (의약품 오인 표현)
+    - 온라인 판매 시 통신판매업 신고 병행 필수 (permit-001)
+
 disclaimer: '이 데이터는 정부24(gov.kr) 및 각 부처 공식 자료를 기반으로 합니다.
 
   법령 개정으로 최신 정보와 다를 수 있으므로 중요한 결정 전
