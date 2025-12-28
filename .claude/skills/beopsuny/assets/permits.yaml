@@ -1,0 +1,564 @@
+# ============================================================
+# 기업 허가/신고 인덱스
+# Business Permits & Registrations Index
+# ============================================================
+# 기업 설립 및 운영에 필요한 주요 허가/인가/등록/신고 정보
+#
+# 용도:
+#   1. 업종별 필요 인허가 조회 (fetch_law.py permits)
+#   2. 체크리스트 자동 생성
+#   3. 근거법령 크로스레퍼런스
+#
+# 데이터 출처:
+#   - 정부24 민원안내 (gov.kr)
+#   - 찾기쉬운법령 (easylaw.go.kr)
+#   - 수동 큐레이션 (tools/permits/seed_data.yaml)
+#
+# 주의:
+#   - 법령 개정으로 요건/서류 변경 가능
+#   - 분기별 확인 권장 (GitHub Actions 자동화)
+
+name: 기업 허가/신고 인덱스
+description: 업종별 허가/인가/등록/신고 요건 및 근거법령
+type: permits
+category: 기업법무
+last_updated: '2025-12-28'
+maintenance:
+  review_cycle: quarterly
+  next_review: 2026-01
+  volatile_items:
+  - 수수료 금액
+  - 구비서류 목록
+  - 자본금 요건
+  data_source:
+    primary: 수동 큐레이션 (tools/permits/seed_data.yaml)
+    secondary: gov.kr (정부24)
+  note: 분기별 법령 개정 확인 권장
+  changelog:
+  - date: '2025-12-28'
+    changes: 초기 버전 생성 (IT/스타트업 중심 12개)
+categories:
+- id: commerce
+  name: 상업/유통
+  description: 온라인/오프라인 판매, 유통업
+- id: it_telecom
+  name: IT/통신
+  description: 소프트웨어, 통신, 정보서비스
+- id: finance
+  name: 금융/보험
+  description: 전자금융, 대부업, 보험
+- id: education
+  name: 교육/학원
+  description: 학원, 온라인교육, 훈련기관
+- id: hr
+  name: 인사/노무
+  description: 채용, 직업소개, 파견
+permit_types:
+- id: permit
+  name: 허가
+  description: 기관의 사전 승인 필요
+- id: registration
+  name: 등록
+  description: 요건 충족 시 등록
+- id: notification
+  name: 신고
+  description: 사전 신고만 필요 (수리간주)
+items:
+- id: permit-001
+  name: 통신판매업 신고
+  type: notification
+  category: commerce
+  description: 온라인으로 재화/서비스를 판매하는 사업자
+  law:
+    name: 전자상거래 등에서의 소비자보호에 관한 법률
+    short_name: 전자상거래법
+    article: 제12조
+    law_id: 009318
+  authority:
+    name: 시/군/구청
+    dept: 지역경제과 또는 일자리경제과
+  processing:
+    period: 7일 이내
+    methods:
+    - 인터넷 (정부24)
+    - 방문
+  fees:
+    amount: 0
+    note: 무료
+  documents:
+  - 사업자등록증 사본
+  - 통신판매업 신고서
+  - 구매안전서비스 가입증명서 (에스크로/소비자피해보상보험)
+  requirements:
+  - 구매안전서비스 가입 필수 (거래금액 10만원 초과 시)
+  - 사업장 주소지 관할 신고
+  penalty:
+  - 미신고 영업 시 1년 이하 징역 또는 1억원 이하 벌금
+  - 과태료 1천만원 이하
+  related_checklists:
+  - startup
+  - privacy_compliance
+  priority: critical
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000155
+  sources:
+  - url: https://easylaw.go.kr/CSP/CnpClsMain.laf?csmSeq=691&ccfNo=2&cciNo=3&cnpClsNo=1
+    name: 찾기쉬운법령 - 통신판매업
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: '- 신고 후 신고번호를 사이트에 표시해야 함
+
+    - 사업자단위과세 적용 사업장은 주된 사업장 소재지에서 신고
+
+    '
+- id: permit-002
+  name: 전자상거래 사업자 신원정보 등록
+  type: registration
+  category: commerce
+  description: 전자상거래 사업자의 신원정보를 공정위 시스템에 등록
+  law:
+    name: 전자상거래 등에서의 소비자보호에 관한 법률
+    short_name: 전자상거래법
+    article: 제12조의2
+    law_id: 009318
+  authority:
+    name: 공정거래위원회
+    dept: 전자거래과
+  processing:
+    period: 즉시 (온라인)
+    methods:
+    - 인터넷 (전자상거래 통합관리시스템)
+  fees:
+    amount: 0
+  documents:
+  - 사업자등록증
+  - 대표자 신분증
+  requirements:
+  - 통신판매업 신고 후 등록
+  penalty:
+  - 과태료 500만원 이하
+  related_checklists:
+  - startup
+  priority: high
+  gov24_url: https://www.ecmc.or.kr
+  sources:
+  - url: https://www.ecmc.or.kr
+    name: 전자상거래 통합관리시스템
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: null
+- id: permit-003
+  name: 부가통신사업 신고
+  type: notification
+  category: it_telecom
+  description: 기간통신사업자 회선을 이용해 부가통신서비스 제공
+  law:
+    name: 전기통신사업법
+    article: 제22조
+    law_id: '001472'
+  authority:
+    name: 과학기술정보통신부
+    dept: 통신정책관실
+  processing:
+    period: 14일 이내
+    methods:
+    - 인터넷 (정부24)
+    - 방문
+    - 우편
+  fees:
+    amount: 0
+  documents:
+  - 부가통신사업 신고서
+  - 사업자등록증 사본
+  - 사업계획서
+  requirements:
+  - 기간통신사업자 회선 이용 계약
+  - 신고 후 30일 내 영업 개시
+  penalty:
+  - 미신고 영업 시 3년 이하 징역 또는 1억5천만원 이하 벌금
+  related_checklists:
+  - startup
+  priority: high
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=12100000055
+  sources:
+  - url: https://www.msit.go.kr
+    name: 과학기술정보통신부
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: '- 앱/웹 서비스를 제공하는 대부분의 IT 기업에 해당
+
+    - 단순 웹사이트 운영은 제외될 수 있음
+
+    '
+- id: permit-004
+  name: 정보통신공사업 등록
+  type: registration
+  category: it_telecom
+  description: 정보통신설비 공사업을 영위하는 사업자
+  law:
+    name: 정보통신공사업법
+    article: 제14조
+    law_id: '010010'
+  authority:
+    name: 시/도지사
+    dept: 정보통신 담당부서
+  processing:
+    period: 14일 이내
+    methods:
+    - 인터넷 (정부24)
+    - 방문
+  fees:
+    amount: 30000
+    note: 등록면허세 별도
+  documents:
+  - 정보통신공사업 등록신청서
+  - 기술인력 보유 증명서류
+  - 자본금 증명서류
+  - 사무실 임대차계약서
+  requirements:
+  - 자본금 1억5천만원 이상 (법인)
+  - 기술인력 보유 (정보통신기술자 1인 이상)
+  penalty:
+  - 미등록 영업 시 3년 이하 징역 또는 3천만원 이하 벌금
+  related_checklists:
+  - startup
+  priority: medium
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000021
+  sources:
+  - url: https://easylaw.go.kr
+    name: 찾기쉬운법령
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: null
+- id: permit-005
+  name: 소프트웨어사업자 신고
+  type: notification
+  category: it_telecom
+  description: 소프트웨어 개발/유통/서비스 사업자
+  law:
+    name: 소프트웨어 진흥법
+    article: 제24조
+    law_id: 011998
+  authority:
+    name: 한국소프트웨어산업협회
+    dept: 사업자신고센터
+  processing:
+    period: 7일 이내
+    methods:
+    - 인터넷 (소프트웨어산업정보종합시스템)
+  fees:
+    amount: 0
+  documents:
+  - 소프트웨어사업자 신고서
+  - 사업자등록증 사본
+  requirements:
+  - 소프트웨어 개발/유통/서비스업 영위
+  penalty:
+  - 없음 (신고 의무 위반 시 불이익 없음, 단 정부사업 참여 제한)
+  related_checklists:
+  - startup
+  priority: medium
+  gov24_url: https://www.swit.or.kr
+  sources:
+  - url: https://www.swit.or.kr
+    name: 소프트웨어산업정보종합시스템
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: '- 공공 SW 사업 참여 시 필수
+
+    - 신고 후 SW사업자확인서 발급 가능
+
+    '
+- id: permit-006
+  name: 개인정보 처리 위탁 계약
+  type: notification
+  category: it_telecom
+  description: 개인정보처리를 제3자에게 위탁하는 경우
+  law:
+    name: 개인정보 보호법
+    article: 제26조
+    law_id: '011357'
+  authority:
+    name: 개인정보보호위원회
+    dept: 조사총괄과
+  processing:
+    period: 없음 (계약 체결로 완료)
+    methods:
+    - 서면 계약
+  fees:
+    amount: 0
+  documents:
+  - 개인정보 처리 위탁 계약서
+  requirements:
+  - 위탁 내용 문서화
+  - 수탁자 관리감독
+  - 정보주체 고지 (개인정보처리방침 등)
+  penalty:
+  - 관리감독 소홀 시 과태료 2천만원 이하
+  related_checklists:
+  - privacy_compliance
+  priority: high
+  gov24_url: null
+  sources:
+  - url: https://www.pipc.go.kr
+    name: 개인정보보호위원회
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: null
+- id: permit-007
+  name: 전자금융업 등록
+  type: registration
+  category: finance
+  description: 전자지급결제대행(PG), 결제대행, 선불전자지급수단 등
+  law:
+    name: 전자금융거래법
+    article: 제28조
+    law_id: 008030
+  authority:
+    name: 금융위원회
+    dept: 전자금융과
+  processing:
+    period: 60일 이내
+    methods:
+    - 서면 (금융위원회)
+  fees:
+    amount: 0
+    note: 등록면허세 별도
+  documents:
+  - 전자금융업 등록신청서
+  - 사업계획서
+  - 자본금 증명서류 (최소 5억~30억)
+  - 전산설비 및 보안시스템 구축 증빙
+  - 인력 현황
+  requirements:
+  - 자본금 요건 (업종별 5억~30억원)
+  - 전산설비 및 보안시스템
+  - 전문인력 확보
+  penalty:
+  - 무등록 영업 시 5년 이하 징역 또는 3억원 이하 벌금
+  related_checklists:
+  - startup
+  priority: critical
+  gov24_url: https://www.fsc.go.kr
+  sources:
+  - url: https://www.fsc.go.kr
+    name: 금융위원회
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: '- PG 등록: 자본금 30억원 이상
+
+    - 선불전자지급수단: 자본금 5억원 이상
+
+    - 금융보안원 보안성심의 필수
+
+    '
+- id: permit-008
+  name: 온라인투자연계금융업 등록
+  type: registration
+  category: finance
+  description: P2P 대출 플랫폼 운영 (온라인투자연계금융업)
+  law:
+    name: 온라인투자연계금융업 및 이용자 보호에 관한 법률
+    short_name: 온투법
+    article: 제5조
+    law_id: '017146'
+  authority:
+    name: 금융위원회
+    dept: 핀테크기획팀
+  processing:
+    period: 90일 이내
+    methods:
+    - 서면 (금융위원회)
+  fees:
+    amount: 0
+  documents:
+  - 온라인투자연계금융업 등록신청서
+  - 자본금 증명 (5억원 이상)
+  - 사업계획서
+  - 내부통제기준
+  - 전산설비 증빙
+  requirements:
+  - 자본금 5억원 이상
+  - 대주주 적격성 심사
+  - 전산설비 및 보안시스템
+  penalty:
+  - 무등록 영업 시 5년 이하 징역 또는 5천만원 이하 벌금
+  related_checklists:
+  - startup
+  priority: critical
+  gov24_url: https://www.fsc.go.kr
+  sources:
+  - url: https://www.fsc.go.kr
+    name: 금융위원회
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: null
+- id: permit-009
+  name: 학원 등록
+  type: registration
+  category: education
+  description: 학교교과교습학원, 평생직업교육학원 등
+  law:
+    name: 학원의 설립·운영 및 과외교습에 관한 법률
+    short_name: 학원법
+    article: 제6조
+    law_id: '005641'
+  authority:
+    name: 교육청
+    dept: 평생교육과
+  processing:
+    period: 14일 이내
+    methods:
+    - 인터넷 (정부24)
+    - 방문
+  fees:
+    amount: 30000
+    note: 등록면허세 별도
+  documents:
+  - 학원설립·운영등록신청서
+  - 시설평면도
+  - 교습자 자격증명 서류
+  - 임대차계약서
+  requirements:
+  - 시설 기준 충족 (면적, 환기, 채광 등)
+  - 교습자 자격 요건
+  penalty:
+  - 미등록 운영 시 1년 이하 징역 또는 1천만원 이하 벌금
+  related_checklists:
+  - startup
+  priority: high
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000026
+  sources:
+  - url: https://www.moe.go.kr
+    name: 교육부
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: null
+- id: permit-010
+  name: 원격평생교육시설 신고
+  type: notification
+  category: education
+  description: 온라인 교육 서비스 제공 (원격평생교육시설)
+  law:
+    name: 평생교육법
+    article: 제33조
+    law_id: 008670
+  authority:
+    name: 교육청
+    dept: 평생교육과
+  processing:
+    period: 14일 이내
+    methods:
+    - 인터넷 (정부24)
+    - 방문
+  fees:
+    amount: 0
+  documents:
+  - 원격평생교육시설 신고서
+  - 학습관리시스템 운영계획서
+  - 교육과정 편성계획서
+  requirements:
+  - 학습관리시스템(LMS) 구축
+  - 교육과정 운영 능력
+  penalty:
+  - 미신고 운영 시 500만원 이하 과태료
+  related_checklists:
+  - startup
+  priority: medium
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000080
+  sources:
+  - url: https://www.moe.go.kr
+    name: 교육부
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: '- 에듀테크 스타트업 필수
+
+    - 신고 후 시설번호 부여
+
+    '
+- id: permit-011
+  name: 유료직업소개사업 등록
+  type: registration
+  category: hr
+  description: 채용 플랫폼, 헤드헌팅 등 유료 직업소개
+  law:
+    name: 직업안정법
+    article: 제19조
+    law_id: 001823
+  authority:
+    name: 시/군/구청
+    dept: 일자리정책과
+  processing:
+    period: 14일 이내
+    methods:
+    - 인터넷 (정부24)
+    - 방문
+  fees:
+    amount: 30000
+    note: 등록면허세 별도
+  documents:
+  - 유료직업소개사업 등록신청서
+  - 시설 현황
+  - 자본금 증명 (3천만원 이상)
+  - 직업상담사 자격증
+  requirements:
+  - 자본금 3천만원 이상
+  - 직업상담사 1인 이상
+  - 사무실 요건 충족
+  penalty:
+  - 미등록 영업 시 3년 이하 징역 또는 3천만원 이하 벌금
+  related_checklists:
+  - startup
+  - labor_hr
+  priority: high
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000061
+  sources:
+  - url: https://www.moel.go.kr
+    name: 고용노동부
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: '- 채용 플랫폼 운영 시 필수
+
+    - 국내/국외 직업소개 구분
+
+    '
+- id: permit-012
+  name: 무료직업소개사업 신고
+  type: notification
+  category: hr
+  description: 무료 채용정보 제공 플랫폼
+  law:
+    name: 직업안정법
+    article: 제18조
+    law_id: 001823
+  authority:
+    name: 시/군/구청
+    dept: 일자리정책과
+  processing:
+    period: 7일 이내
+    methods:
+    - 인터넷 (정부24)
+    - 방문
+  fees:
+    amount: 0
+  documents:
+  - 무료직업소개사업 신고서
+  - 사업자등록증 사본
+  requirements:
+  - 비영리 목적 운영
+  penalty:
+  - 미신고 시 과태료 300만원 이하
+  related_checklists:
+  - startup
+  priority: medium
+  gov24_url: https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000060
+  sources:
+  - url: https://www.moel.go.kr
+    name: 고용노동부
+    accessed: '2025-12-28'
+  last_verified: '2025-12-28'
+  notes: null
+disclaimer: '이 데이터는 정부24(gov.kr) 및 각 부처 공식 자료를 기반으로 합니다.
+
+  법령 개정으로 최신 정보와 다를 수 있으므로 중요한 결정 전
+
+  관할 기관 또는 전문가와 확인하세요.'
