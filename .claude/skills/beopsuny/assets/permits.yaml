@@ -887,7 +887,7 @@ items:
   law:
     name: 민간임대주택에 관한 특별법
     article: 제7조
-    law_id: '012602'
+    law_id: "000243"
   authority:
     name: 시/도지사
     dept: 주택정책과
