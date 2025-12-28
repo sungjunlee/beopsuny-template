@@ -8,6 +8,7 @@
 #   - 법령 개정 감지: 매월 1일 09:00 KST
 #   - 신선도 리포트: 매주 월요일 09:00 KST
 #   - 조문 검증: 매 분기 첫날 (1/1, 4/1, 7/1, 10/1) 09:00 KST
+#   - 허가/신고 검증: 매 분기 첫날 (1/1, 4/1, 7/1, 10/1) 09:00 KST
 #
 # 필요한 Secrets:
 #   - FAMILY_OC_CODE: law.go.kr API 인증 코드 (기존 family-release와 공유)
@@ -40,6 +41,7 @@ on:
           - check-law-updates
           - freshness-report
           - validate-citations
+          - validate-permits
 
 env:
   SCRIPTS_DIR: .claude/skills/beopsuny/scripts
@@ -308,3 +310,73 @@ jobs:
               labels: ['maintenance', 'citation-check'],
             });
             console.log('Created citation validation issue');
+
+  # ─────────────────────────────────────────────────────────
+  # 허가/신고 검증 (분기별: 1/1, 4/1, 7/1, 10/1)
+  # ─────────────────────────────────────────────────────────
+  validate-permits:
+    name: Validate Permits
+    runs-on: ubuntu-latest
+    # 분기 첫날 스케줄 또는 수동 실행
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.task == 'all' || github.event.inputs.task == 'validate-permits')
+      ||
+      github.event_name == 'schedule' && github.event.schedule == '0 0 1 1,4,7,10 *'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Validate permits
+        id: validate
+        working-directory: ${{ env.SCRIPTS_DIR }}
+        run: |
+          set +e
+          python maintenance/validate_permits.py --markdown > report.md 2>&1
+          exit_code=$?
+          set -e
+
+          # Exit code 해석
+          # 0: 모두 유효
+          # 1: 검증 실패 항목 발견
+          # 2+: 오류 발생
+          if [ $exit_code -eq 0 ]; then
+            echo "has_invalid=false" >> $GITHUB_OUTPUT
+          elif [ $exit_code -eq 1 ]; then
+            echo "has_invalid=true" >> $GITHUB_OUTPUT
+            {
+              echo 'report<<EOF'
+              cat report.md
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "::error::Script failed with exit code $exit_code"
+            cat report.md
+            exit $exit_code
+          fi
+
+      - name: Create Issue if invalid permits found
+        if: steps.validate.outputs.has_invalid == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `📋 허가/신고 검증 필요 (${new Date().toISOString().slice(0, 7)})`;
+            const body = `${{ steps.validate.outputs.report }}`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['maintenance', 'permit-check'],
+            });
+            console.log('Created permit validation issue');
